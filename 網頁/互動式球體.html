@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>互動式球體幾何教學 (Interactive Sphere Geometry)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            background-color: #f0f0f0;
+            touch-action: none; /* 防止手機瀏覽器的預設滑動行為 */
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: #333;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        }
+
+        p {
+            margin: 5px 0 0;
+            font-size: 0.9rem;
+            color: #555;
+            background: rgba(255,255,255,0.6);
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        /* CSS2D Label Styles - Base */
+        .label {
+            color: #fff;
+            font-family: sans-serif;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            pointer-events: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: background 0.3s, transform 0.2s;
+            text-align: center;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* Color-coded Labels */
+        .label-center {
+            background: rgba(230, 140, 0, 0.85); /* 橘黃色 (對應球心) */
+        }
+
+        .label-diameter {
+            background: rgba(220, 50, 50, 0.85); /* 紅色 (對應直徑) */
+        }
+
+        .label-radius {
+            background: rgba(180, 0, 0, 0.85); /* 深紅色 (對應球體半徑) */
+        }
+
+        .label-section {
+            background: rgba(0, 0, 200, 0.85); /* 藍色 (對應剖面半徑) */
+        }
+        
+        .label-cap {
+            background: rgba(70, 160, 220, 0.85); /* 淡藍色 (對應普通剖面) */
+        }
+
+        /* Special States */
+        .label.highlight {
+            background: rgba(0, 180, 0, 0.9); /* 鮮綠色 (大圓) */
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 0 15px rgba(0,255,0,0.4);
+            border: 2px solid rgba(255,255,255,0.8);
+        }
+
+        .label.warning {
+            background: rgba(255, 0, 0, 0.95); /* 拖曳時的高亮紅 */
+            transform: scale(1.1);
+        }
+        
+        .label.blue-highlight {
+            background: rgba(0, 0, 255, 0.95); /* 拖曳時的高亮藍 */
+            transform: scale(1.1);
+        }
+
+        /* Loading Overlay */
+        #loading {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            transition: opacity 0.5s;
+        }
+
+        /* 觸控友善的滑動條容器 */
+        #slider-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 20;
+            text-align: center;
+        }
+
+        #slider-label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: bold;
+        }
+
+        /* 自定義 Range Input */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* 滑軌 */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #ddd;
+            border-radius: 4px;
+        }
+        
+        /* 滑塊 (Thumb) - 加大以利觸控 */
+        input[type=range]::-webkit-slider-thumb {
+            height: 30px;
+            width: 30px;
+            border-radius: 50%;
+            background: #4285f4;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -11px; /* 置中 */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 2px solid white;
+        }
+
+        input[type=range]::-moz-range-thumb {
+            height: 30px;
+            width: 30px;
+            border-radius: 50%;
+            background: #4285f4;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* 隱藏預設的 lil-gui (右上角面板) */
+        .lil-gui { 
+            display: none !important; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">載入 3D 引擎中...<br>Loading 3D Engine...</div>
+    
+    <div id="info">
+        <h1>球體幾何特性互動教學<br><span style="font-size: 1rem; font-weight: normal;">Interactive Sphere Geometry</span></h1>
+        <p>
+            拖曳 <span style="color:red; font-weight:bold;">紅點 (Red Dot)</span> 移動球體半徑 (Radius)<br>
+            拖曳 <span style="color:blue; font-weight:bold;">藍點 (Blue Dot)</span> 移動剖面半徑 (Section Radius)
+        </p>
+    </div>
+
+    <!-- 底部觸控滑動條 -->
+    <div id="slider-container">
+        <label id="slider-label" for="clip-slider">移動切割面 (Move Cut Position)</label>
+        <input type="range" id="clip-slider" min="-5" max="5" step="0.01" value="0">
+    </div>
+
+    <!-- Import Maps for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+        import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';
+
+        // --- 全域變數 ---
+        let camera, scene, renderer, labelRenderer;
+        let controls, viewHelper;
+        let sphere, capMesh;
+        let centerLabel, radiusLabel, capLabel, diameterLabel, sectionRadiusLabel;
+        let radiusLine, diameterLine, sectionRadiusLine;
+        let radiusHandle, sectionHandle; 
+        let raycaster, pointer;
+        let draggedObject = null; 
+        
+        // 幾何常數
+        const R = 5; // 球體半徑
+        const CLIP_PLANE_NORMAL = new THREE.Vector3(-1, 0, 0); // 切割面法向量 (垂直 X 軸)
+        
+        // 互動狀態
+        const state = {
+            clipPosition: 0, // 切割位置 d (-5 ~ 5)
+            sectionRadius: R // 當前剖面半徑 r
+        };
+
+        init();
+        animate();
+
+        function init() {
+            // 1. 場景設定
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf5f5f7); 
+
+            // 2. 攝影機
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(10, 10, 15);
+
+            // 3. 渲染器 (WebGL)
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.localClippingEnabled = true; 
+            renderer.shadowMap.enabled = true;
+            renderer.autoClear = false; 
+            document.body.appendChild(renderer.domElement);
+
+            // 4. 渲染器 (CSS2D)
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelRenderer.domElement.style.pointerEvents = 'none'; 
+            document.body.appendChild(labelRenderer.domElement);
+
+            // 5. 控制器
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // 6. 視角輔助工具
+            viewHelper = new ViewHelper(camera, renderer.domElement);
+            viewHelper.position.set(0.8, -0.8, 0); 
+            viewHelper.scale.set(0.6, 0.6, 0.6); 
+
+            // 7. 燈光
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const backLight = new THREE.DirectionalLight(0xaaccff, 1.0);
+            backLight.position.set(-10, -10, -10);
+            scene.add(backLight);
+
+            // --- 核心幾何物件建構 ---
+            buildSceneObjects();
+            
+            // --- 互動機制 ---
+            setupInteraction();
+            
+            // --- UI 介面 ---
+            setupUI();
+
+            // 移除 Loading
+            document.getElementById('loading').style.opacity = 0;
+            setTimeout(() => document.getElementById('loading').remove(), 500);
+            
+            // 視窗響應
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function buildSceneObjects() {
+            // A. 主要球體
+            const geometry = new THREE.SphereGeometry(R, 64, 64);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                metalness: 0.0,
+                roughness: 0.05,
+                transmission: 0.95,
+                thickness: 0.0,
+                ior: 1.2, 
+                iridescence: 1.0, 
+                iridescenceIOR: 1.3,
+                iridescenceThicknessRange: [100, 400], 
+                clearcoat: 1.0, 
+                clearcoatRoughness: 0.0,
+                side: THREE.DoubleSide, 
+                transparent: true
+            });
+
+            sphere = new THREE.Mesh(geometry, material);
+            const localPlane = new THREE.Plane(CLIP_PLANE_NORMAL, 0);
+            sphere.material.clippingPlanes = [localPlane];
+            scene.add(sphere);
+
+            // B. 剖面蓋子
+            const capGeometry = new THREE.CircleGeometry(R, 64);
+            const capMaterial = new THREE.MeshBasicMaterial({
+                color: 0x88ccff,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.5
+            });
+            capMesh = new THREE.Mesh(capGeometry, capMaterial);
+            capMesh.rotation.y = -Math.PI / 2;
+            scene.add(capMesh);
+
+            // C. 球心 (Yellow/Orange)
+            const centerGeo = new THREE.SphereGeometry(0.15, 16, 16);
+            const centerMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const centerMesh = new THREE.Mesh(centerGeo, centerMat);
+            scene.add(centerMesh);
+            
+            // 指定類別: label-center
+            centerLabel = createLabel("球心 (Center)", new THREE.Vector3(0, -0.3, 0), "label-center");
+            scene.add(centerLabel);
+
+            // D. 直徑 (Red)
+            const diameterPoints = [new THREE.Vector3(-R, 0, 0), new THREE.Vector3(R, 0, 0)];
+            const diameterGeo = new THREE.BufferGeometry().setFromPoints(diameterPoints);
+            const diameterMat = new THREE.LineDashedMaterial({
+                color: 0xff3333,
+                dashSize: 0.5,
+                gapSize: 0.2,
+                linewidth: 2
+            });
+            diameterLine = new THREE.Line(diameterGeo, diameterMat);
+            diameterLine.computeLineDistances();
+            scene.add(diameterLine);
+            
+            // 指定類別: label-diameter
+            diameterLabel = createLabel("直徑 (Diameter) = 10", new THREE.Vector3(2.5, 0.2, 0), "label-diameter");
+            scene.add(diameterLabel);
+
+            // E. 互動半徑 (球面紅色)
+            const initPos = new THREE.Vector3(-R * Math.cos(Math.PI/4), R * Math.sin(Math.PI/4), 0);
+            
+            // 1. 手柄
+            const handleGeo = new THREE.SphereGeometry(0.3, 32, 32);
+            const handleMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x550000 });
+            radiusHandle = new THREE.Mesh(handleGeo, handleMat);
+            radiusHandle.position.copy(initPos);
+            radiusHandle.userData.isHandle = true;
+            scene.add(radiusHandle);
+
+            // 2. 線條
+            const radiusPoints = [new THREE.Vector3(0, 0, 0), initPos];
+            const radiusLineGeo = new THREE.BufferGeometry().setFromPoints(radiusPoints);
+            const radiusLineMat = new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 2 });
+            radiusLine = new THREE.Line(radiusLineGeo, radiusLineMat);
+            scene.add(radiusLine);
+
+            // 3. 標籤 - 指定類別: label-radius
+            radiusLabel = createLabel(`球體半徑 (Radius) R = ${R.toFixed(1)}`, new THREE.Vector3().copy(initPos).multiplyScalar(0.5), "label-radius");
+            scene.add(radiusLabel);
+            
+            // F. 剖面互動半徑 (剖面藍色)
+            const sectionHandleGeo = new THREE.SphereGeometry(0.3, 32, 32);
+            const sectionHandleMat = new THREE.MeshStandardMaterial({ color: 0x0000ff, emissive: 0x000055 });
+            sectionHandle = new THREE.Mesh(sectionHandleGeo, sectionHandleMat);
+            sectionHandle.position.set(0, R, 0);
+            sectionHandle.userData.isSectionHandle = true;
+            scene.add(sectionHandle);
+
+            const secRadPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, R, 0)];
+            const secRadGeo = new THREE.BufferGeometry().setFromPoints(secRadPoints);
+            const secRadMat = new THREE.LineBasicMaterial({ 
+                color: 0x0000cc,
+                linewidth: 3 
+            });
+            sectionRadiusLine = new THREE.Line(secRadGeo, secRadMat);
+            sectionRadiusLine.renderOrder = 1; 
+            scene.add(sectionRadiusLine);
+
+            // 指定類別: label-section
+            sectionRadiusLabel = createLabel(`剖面半徑 (Section r) = ${R.toFixed(1)}`, new THREE.Vector3(0, R/2, 0), "label-section");
+            scene.add(sectionRadiusLabel);
+
+            // 4. 剖面大標題 - 初始指定類別: label-cap
+            capLabel = createLabel("最大剖面 (大圓 Great Circle)", new THREE.Vector3(0, R + 0.8, 0), "label-cap");
+            capLabel.element.classList.add('highlight');
+            scene.add(capLabel);
+        }
+
+        // 修改後的 createLabel，支援傳入自定義 className
+        function createLabel(text, position, className = "label-default") {
+            const div = document.createElement('div');
+            div.className = 'label ' + className;
+            div.innerHTML = text.replace(/\n/g, '<br>'); 
+            const label = new CSS2DObject(div);
+            label.position.copy(position);
+            return label;
+        }
+
+        function setupUI() {
+            const slider = document.getElementById('clip-slider');
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                updateClipping(val);
+            });
+            updateClipping(0);
+        }
+
+        // 更新切割邏輯
+        function updateClipping(d) {
+            state.clipPosition = d;
+
+            sphere.material.clippingPlanes[0].constant = d;
+            capMesh.position.set(d, 0, 0);
+
+            const r_squared = R*R - d*d;
+
+            if (r_squared > 0.001) {
+                const r = Math.sqrt(r_squared);
+                state.sectionRadius = r;
+                capMesh.visible = true;
+                capMesh.scale.set(r/R, r/R, 1);
+                
+                sectionHandle.visible = true;
+                sectionRadiusLine.visible = true;
+                sectionRadiusLabel.visible = true;
+
+                let angle = Math.atan2(sectionHandle.position.z, sectionHandle.position.y);
+                if (isNaN(angle)) angle = Math.PI / 2;
+
+                const newY = r * Math.cos(angle);
+                const newZ = r * Math.sin(angle);
+                sectionHandle.position.set(d, newY, newZ);
+
+                const positions = sectionRadiusLine.geometry.attributes.position.array;
+                positions[0] = d; positions[1] = 0; positions[2] = 0;
+                positions[3] = d; positions[4] = newY; positions[5] = newZ;
+                sectionRadiusLine.geometry.attributes.position.needsUpdate = true;
+
+                sectionRadiusLabel.element.innerHTML = `剖面半徑 (Section r) = ${r.toFixed(2)}`;
+                sectionRadiusLabel.position.set(d, newY / 2, newZ / 2);
+
+                const EPSILON = 0.1;
+                const isGreatCircle = Math.abs(d) < EPSILON;
+                
+                capLabel.position.set(d, r + 0.5, 0);
+
+                // 移除舊有特定樣式，根據大圓狀態套用新樣式
+                capLabel.element.classList.remove('highlight', 'label-cap');
+                
+                if (isGreatCircle) {
+                    capMesh.material.color.set(0x00ff00);
+                    capLabel.element.innerHTML = `最大剖面 (大圓 Great Circle)`;
+                    capLabel.element.classList.add('highlight'); // 綠色高亮
+                    capLabel.visible = true;
+                } else {
+                    capMesh.material.color.set(0x88ccff);
+                    capLabel.element.innerHTML = `剖面圓 (Section Circle)`;
+                    capLabel.element.classList.add('label-cap'); // 藍色背景
+                    capLabel.visible = true;
+                }
+            } else {
+                state.sectionRadius = 0;
+                capMesh.visible = false;
+                capLabel.visible = false;
+                sectionRadiusLine.visible = false;
+                sectionRadiusLabel.visible = false;
+                sectionHandle.visible = false;
+            }
+        }
+
+        function updateRadiusLineAndLabel() {
+            const positions = radiusLine.geometry.attributes.position.array;
+            positions[3] = radiusHandle.position.x;
+            positions[4] = radiusHandle.position.y;
+            positions[5] = radiusHandle.position.z;
+            radiusLine.geometry.attributes.position.needsUpdate = true;
+            const midPoint = radiusHandle.position.clone().multiplyScalar(0.5);
+            radiusLabel.position.copy(midPoint);
+        }
+
+        function setupInteraction() {
+            raycaster = new THREE.Raycaster();
+            pointer = new THREE.Vector2();
+
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+        }
+
+        function onPointerDown(event) {
+            updatePointer(event);
+            raycaster.setFromCamera(pointer, camera);
+            raycaster.params.Line.threshold = 0.5;
+            raycaster.params.Points.threshold = 0.5;
+
+            const redIntersects = raycaster.intersectObject(radiusHandle);
+            const blueIntersects = raycaster.intersectObject(sectionHandle);
+
+            if (redIntersects.length > 0) {
+                draggedObject = 'radius';
+                controls.enabled = false;
+                radiusHandle.material.emissive.set(0xaa0000);
+                // 使用自定義警告樣式，保留背景色
+                radiusLabel.element.classList.add('warning'); 
+                document.body.style.cursor = 'grabbing';
+            } else if (blueIntersects.length > 0 && sectionHandle.visible) {
+                draggedObject = 'section';
+                controls.enabled = false;
+                sectionHandle.material.emissive.set(0x0000aa);
+                // 使用自定義高亮樣式，保留背景色
+                sectionRadiusLabel.element.classList.add('blue-highlight');
+                document.body.style.cursor = 'grabbing';
+            }
+        }
+
+        function onPointerMove(event) {
+            if (!draggedObject) return;
+
+            updatePointer(event);
+            raycaster.setFromCamera(pointer, camera);
+
+            // 準備一個備用的虛擬平面 (面向攝影機) 用於當滑鼠移出球體時的投影
+            const planeNormal = camera.position.clone().normalize();
+            const plane = new THREE.Plane(planeNormal, 0);
+            
+            if (draggedObject === 'section') {
+                plane.normal.set(1, 0, 0);
+                plane.constant = -state.clipPosition; 
+            }
+
+            // 根據拖曳對象採取不同的策略
+            if (draggedObject === 'radius') {
+                // 優先檢測球體表面 (Direct Surface Raycast) - 這是最直覺的「點哪去哪」
+                const sphereIntersects = raycaster.intersectObject(sphere);
+                let target = new THREE.Vector3();
+                let found = false;
+
+                if (sphereIntersects.length > 0) {
+                    target.copy(sphereIntersects[0].point);
+                    found = true;
+                } else {
+                    // Fallback: 如果沒點到球體 (例如滑鼠移到球外)，則使用平面投影法確保操作連續性
+                    raycaster.ray.intersectPlane(plane, target);
+                    if (target) {
+                        found = true;
+                    }
+                }
+
+                if (found) {
+                    // 正規化到球面上
+                    target.normalize().multiplyScalar(R);
+                    
+                    // 磁吸效果 (Magnetic Snap) - 靠近切割面時吸附
+                    if (Math.abs(target.x - state.clipPosition) < 0.25) {
+                         target.x = state.clipPosition;
+                         // 重新調整 YZ 確保在球面上
+                         const currentR = Math.sqrt(target.y*target.y + target.z*target.z);
+                         const targetR = Math.sqrt(Math.max(0, R*R - target.x*target.x));
+                         if (currentR > 0) {
+                             const s = targetR / currentR;
+                             target.y *= s;
+                             target.z *= s;
+                         }
+                    }
+                    
+                    radiusHandle.position.copy(target);
+                    updateRadiusLineAndLabel();
+                }
+
+            } else if (draggedObject === 'section') {
+                // 藍點邏輯維持不變 (在切割面上移動)
+                const target = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, target);
+                
+                if (target) {
+                    const localY = target.y;
+                    const localZ = target.z;
+                    const currentDist = Math.sqrt(localY*localY + localZ*localZ);
+                    
+                    if (currentDist > 0.0001 && state.sectionRadius > 0) {
+                        const scale = state.sectionRadius / currentDist;
+                        target.y *= scale;
+                        target.z *= scale;
+                        target.x = state.clipPosition; 
+
+                        sectionHandle.position.copy(target);
+
+                        const positions = sectionRadiusLine.geometry.attributes.position.array;
+                        positions[3] = target.x; positions[4] = target.y; positions[5] = target.z;
+                        sectionRadiusLine.geometry.attributes.position.needsUpdate = true;
+                        
+                        sectionRadiusLabel.position.set(state.clipPosition, target.y/2, target.z/2);
+                    }
+                }
+            }
+        }
+
+        function onPointerUp() {
+            if (draggedObject) {
+                controls.enabled = true;
+                document.body.style.cursor = 'auto';
+
+                if (draggedObject === 'radius') {
+                    radiusHandle.material.emissive.set(0x550000);
+                    // 移除拖曳時的特殊 class
+                    radiusLabel.element.classList.remove('warning');
+                    radiusLabel.element.innerHTML = `球體半徑 (Radius) R = ${R.toFixed(1)}`;
+                } else if (draggedObject === 'section') {
+                    sectionHandle.material.emissive.set(0x000055);
+                    sectionRadiusLabel.element.classList.remove('blue-highlight');
+                }
+                
+                draggedObject = null;
+            }
+        }
+
+        function updatePointer(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.clear();
+            renderer.render(scene, camera);
+            if (viewHelper) viewHelper.render(renderer);
+            labelRenderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

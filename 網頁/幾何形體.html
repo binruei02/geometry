@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>立體圖形展開與組合 (3D Shape Unfolding)</title>
+    
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Roboto, sans-serif;
+            background-color: #f0f9ff;
+        }
+        input[type=range] {
+            accent-color: #4f46e5;
+        }
+        .noselect {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
+        .cursor-move { cursor: move; }
+        .cursor-rotate { cursor: alias; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 flex items-center justify-center">
+
+    <div id="root" class="w-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- 圖示組件 ---
+        const IconInfo = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+        const IconPlay = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+        const IconPause = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>;
+        const IconRotateCcw = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+        const IconGrid = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
+        const IconFan = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 12 3 19"/><path d="M12 12 10 2"/><path d="M12 12 21 15"/><path d="M10 2c3.5 0 7 1.5 9.5 4"/><path d="M3 19c0-3.5 1.5-7 4-9.5"/><path d="M21 15c-1 3-4 5-7 5.5"/></svg>;
+        const IconStar = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+        const IconStrip = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="10" rx="2" ry="2"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="16" y1="7" x2="16" y2="17"/></svg>;
+        const IconMove = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>;
+        const Icon3DRotate = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>;
+
+        // --- 向量與幾何核心 ---
+        const Vec3 = {
+            add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }),
+            sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }),
+            scale: (v, s) => ({ x: v.x * s, y: v.y * s, z: v.z * s }),
+            dot: (a, b) => a.x * b.x + a.y * b.y + a.z * b.z,
+            cross: (a, b) => ({ x: a.y*b.z - a.z*b.y, y: a.z*b.x - a.x*b.z, z: a.x*b.y - a.y*b.x }),
+            mag: (v) => Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z),
+            normalize: (v) => { const m = Vec3.mag(v); return m === 0 ? {x:0, y:0, z:0} : {x: v.x/m, y: v.y/m, z: v.z/m}; }
+        };
+
+        const rotateAroundAxis = (p, origin, axis, angle) => {
+            const v = Vec3.sub(p, origin);
+            const u = Vec3.normalize(axis);
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            const crossUV = Vec3.cross(u, v);
+            const dotUV = Vec3.dot(u, v);
+            const vRot = Vec3.add(Vec3.add(Vec3.scale(v, cosA), Vec3.scale(crossUV, sinA)), Vec3.scale(u, dotUV * (1 - cosA)));
+            return Vec3.add(origin, vRot);
+        };
+
+        const transformFace2D = (localPoints, c1_idx, p1_world, p2_world) => {
+            const c1 = localPoints[c1_idx];
+            const c2 = localPoints[(c1_idx + 1) % localPoints.length];
+            const v_child = Vec3.sub(c2, c1);
+            const v_parent = Vec3.sub(p1_world, p2_world); 
+            const angleChild = Math.atan2(v_child.y, v_child.x);
+            const angleParent = Math.atan2(v_parent.y, v_parent.x);
+            const rotAngle = angleParent - angleChild;
+            const cosA = Math.cos(rotAngle);
+            const sinA = Math.sin(rotAngle);
+            
+            return localPoints.map(p => {
+                const dx = p.x - c1.x; const dy = p.y - c1.y;
+                return { x: p2_world.x + dx * cosA - dy * sinA, y: p2_world.y + dx * sinA + dy * cosA, z: 0 };
+            });
+        };
+
+        const createRegularPolygon = (n, radius) => {
+            const pts = [];
+            for(let i=0; i<n; i++) {
+                const angle = -Math.PI/2 - Math.PI/n + (i * 2 * Math.PI / n);
+                pts.push({ x: radius * Math.cos(angle), y: radius * Math.sin(angle), z: 0 });
+            }
+            return pts;
+        };
+
+        // --- 正方體 11 種展開圖定義 ---
+        const CUBE_NETS = [
+            [[1,0], [1,1], [1,2], [1,3], [0,1], [2,1]], // 1: 1-4-1 (十字)
+            [[1,0], [1,1], [1,2], [1,3], [0,0], [2,0]], // 2: 1-4-1 (T型)
+            [[1,0], [1,1], [1,2], [1,3], [0,0], [2,1]], // 3: 1-4-1
+            [[1,0], [1,1], [1,2], [1,3], [0,0], [2,2]], // 4: 1-4-1
+            [[1,0], [1,1], [1,2], [1,3], [0,0], [2,3]], // 5: 1-4-1 (Z型長)
+            [[1,0], [1,1], [1,2], [1,3], [0,1], [2,2]], // 6: 1-4-1
+            [[0,0], [0,1], [1,1], [1,2], [1,3], [2,1]], // 7: 2-3-1
+            [[0,0], [0,1], [1,1], [1,2], [1,3], [2,2]], // 8: 2-3-1
+            [[0,0], [0,1], [1,1], [1,2], [1,3], [2,3]], // 9: 2-3-1
+            [[0,0], [0,1], [1,1], [1,2], [2,2], [2,3]], // 10: 2-2-2 (階梯)
+            [[0,0], [0,1], [0,2], [1,2], [1,3], [1,4]]  // 11: 3-3
+        ];
+
+        const buildCubeNet = (grid, size) => {
+            const nodes = grid.map((pos, i) => ({
+                id: `cube-face-${i}`, x: pos[0], y: pos[1],
+                localPoints: [{x:0, y:0, z:0}, {x:size, y:0, z:0}, {x:size, y:size, z:0}, {x:0, y:size, z:0}],
+                hue: 200 + i * 20, isBase: false, text: (i+1).toString(),
+                children: [], visited: false
+            }));
+
+            const root = nodes[0]; root.visited = true;
+            const queue = [root];
+
+            while(queue.length > 0) {
+                const curr = queue.shift();
+                for(let node of nodes) {
+                    if(node.visited) continue;
+                    const dx = node.x - curr.x; const dy = node.y - curr.y;
+                    if(Math.abs(dx) + Math.abs(dy) === 1) { 
+                        node.visited = true;
+                        let pEdge, cEdge;
+                        if(dx === 1) { pEdge = 1; cEdge = 3; }      
+                        else if(dx === -1) { pEdge = 3; cEdge = 1; } 
+                        else if(dy === 1) { pEdge = 2; cEdge = 0; }  
+                        else if(dy === -1) { pEdge = 0; cEdge = 2; } 
+
+                        node.parentEdge = pEdge; node.childEdge = cEdge;
+                        node.foldAngle = Math.PI / 2; 
+                        curr.children.push(node); queue.push(node);
+                    }
+                }
+            }
+            return root;
+        };
+
+        // --- 各類形體生成器 ---
+        const buildPrismStrip = (n, w, r, h, topAttach, bottomAttach, isSmooth) => {
+            const foldAngle = 2 * Math.PI / n; 
+            const root = {
+                id: 'side-0', localPoints: [{x:0, y:0, z:0}, {x:w, y:0, z:0}, {x:w, y:h, z:0}, {x:0, y:h, z:0}],
+                hue: 200, isBase: false, text: isSmooth ? '' : '1', children: []
+            };
+            
+            let currentSide = root;
+            for(let i=1; i<n; i++) {
+                const nextSide = {
+                    id: `side-${i}`, localPoints: [{x:0, y:0, z:0}, {x:w, y:0, z:0}, {x:w, y:h, z:0}, {x:0, y:h, z:0}],
+                    hue: 200 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    parentEdge: 1, childEdge: 3, foldAngle: foldAngle, children: []
+                };
+                currentSide.children.push(nextSide); currentSide = nextSide;
+            }
+            
+            let tSide = root; for(let i=0; i<topAttach; i++) tSide = tSide.children[0];
+            let bSide = root; for(let i=0; i<bottomAttach; i++) bSide = bSide.children[0];
+            
+            bSide.children.push({
+                id: 'bottom', localPoints: createRegularPolygon(n, r), hue: 35, isBase: true, text: isSmooth ? '' : '下底\nBottom',
+                parentEdge: 0, childEdge: 0, foldAngle: Math.PI / 2, children: []
+            });
+            tSide.children.push({
+                id: 'top', localPoints: createRegularPolygon(n, r), hue: 45, isBase: true, text: isSmooth ? '' : '上底\nTop',
+                parentEdge: 2, childEdge: 0, foldAngle: Math.PI / 2, children: []
+            });
+            return root;
+        };
+
+        const buildPrismStar = (n, w, r, h, topAttach, isSmooth) => {
+            const root = {
+                id: 'bottom', localPoints: createRegularPolygon(n, r), hue: 35, isBase: true, text: isSmooth ? '' : '下底\nBottom', children: []
+            };
+            for(let i=0; i<n; i++) {
+                const side = {
+                    id: `side-${i}`, localPoints: [{x:0, y:0, z:0}, {x:w, y:0, z:0}, {x:w, y:h, z:0}, {x:0, y:h, z:0}],
+                    hue: 200 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    parentEdge: i, childEdge: 0, foldAngle: Math.PI / 2, children: []
+                };
+                root.children.push(side);
+                if (i === topAttach) {
+                    side.children.push({
+                        id: 'top', localPoints: createRegularPolygon(n, r), hue: 45, isBase: true, text: isSmooth ? '' : '上底\nTop',
+                        parentEdge: 2, childEdge: 0, foldAngle: Math.PI / 2, children: []
+                    });
+                }
+            }
+            return root;
+        };
+
+        const buildPyramidFan = (n, w, r, h, baseAttach, isSmooth) => {
+            const a = r * Math.cos(Math.PI / n);
+            const slantHeight = Math.sqrt(h*h + a*a);
+            
+            const triPoints = [{x: -w/2, y: 0, z: 0}, {x: w/2, y: 0, z: 0}, {x: 0, y: slantHeight, z: 0}];
+            
+            const calculatePyramidSideFoldAngle = (n, r, h) => {
+                const t1 = 0; const t2 = 2 * Math.PI / n; const t3 = 4 * Math.PI / n;
+                const V = {x: 0, y: h, z: 0};
+                const P0 = {x: r * Math.cos(t1), y: 0, z: r * Math.sin(t1)};
+                const P1 = {x: r * Math.cos(t2), y: 0, z: r * Math.sin(t2)};
+                const P2 = {x: r * Math.cos(t3), y: 0, z: r * Math.sin(t3)};
+                const n1 = Vec3.normalize(Vec3.cross(Vec3.sub(P0, V), Vec3.sub(P1, V)));
+                const n2 = Vec3.normalize(Vec3.cross(Vec3.sub(P1, V), Vec3.sub(P2, V)));
+                
+                let dot = Vec3.dot(n1, n2);
+                dot = Math.max(-1, Math.min(1, dot)); 
+                return Math.acos(dot);
+            };
+
+            const sideFoldAngle = calculatePyramidSideFoldAngle(n, r, h);
+            const alpha = Math.atan(h / a);
+            
+            const root = {
+                id: 'bottom', localPoints: createRegularPolygon(n, r), hue: 45, isBase: true, text: isSmooth ? '' : '底面\nBase', children: []
+            };
+
+            const mainSide = {
+                id: `side-${baseAttach}`, localPoints: triPoints, hue: 320 + baseAttach * 10, isBase: false, text: isSmooth ? '' : (baseAttach+1).toString(),
+                parentEdge: baseAttach, childEdge: 0, foldAngle: Math.PI - alpha, children: []
+            };
+            root.children.push(mainSide);
+
+            let currentRight = mainSide;
+            for(let i = baseAttach + 1; i < n; i++) {
+                const nextSide = {
+                    id: `side-${i}`, localPoints: triPoints, hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    parentEdge: 1, childEdge: 2, foldAngle: sideFoldAngle, children: []
+                };
+                currentRight.children.push(nextSide);
+                currentRight = nextSide;
+            }
+
+            let currentLeft = mainSide;
+            for(let i = baseAttach - 1; i >= 0; i--) {
+                const nextSide = {
+                    id: `side-${i}`, localPoints: triPoints, hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    parentEdge: 2, childEdge: 1, foldAngle: sideFoldAngle, children: []
+                };
+                currentLeft.children.push(nextSide);
+                currentLeft = nextSide;
+            }
+            
+            return root;
+        };
+
+        const buildPyramidStar = (n, w, r, h, isSmooth) => {
+            const a = r * Math.cos(Math.PI / n);
+            const slantHeight = Math.sqrt(h*h + a*a); const alpha = Math.atan(h / a);
+            const root = {
+                id: 'bottom', localPoints: createRegularPolygon(n, r), hue: 45, isBase: true, text: isSmooth ? '' : '底面\nBase', children: []
+            };
+            for(let i=0; i<n; i++) {
+                root.children.push({
+                    id: `side-${i}`, localPoints: [{x: -w/2, y: 0, z: 0}, {x: w/2, y: 0, z: 0}, {x: 0, y: slantHeight, z: 0}],
+                    hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    parentEdge: i, childEdge: 0, foldAngle: Math.PI - alpha, children: []
+                });
+            }
+            return root;
+        };
+
+        // --- 主元件 ---
+        const PrismPyramidNet = () => {
+            const [shapeType, setShapeType] = useState('prism');
+            const [prismNetType, setPrismNetType] = useState('strip');
+            const [pyramidNetType, setPyramidNetType] = useState('star');
+            const [cubeNetType, setCubeNetType] = useState(0); 
+            
+            const [sides, setSides] = useState(4);
+            const [baseSize, setBaseSize] = useState(100);
+            const [shapeHeight, setShapeHeight] = useState(100);
+
+            const [topBasePosition, setTopBasePosition] = useState(0); 
+            const [bottomBasePosition, setBottomBasePosition] = useState(2); 
+            const [pyramidBasePosition, setPyramidBasePosition] = useState(0);
+            
+            const [animationProgress, setAnimationProgress] = useState(0);
+            const [isAnimating, setIsAnimating] = useState(false);
+
+            // 視圖狀態
+            const [interactionMode, setInteractionMode] = useState('rotate'); 
+            const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+            const [userRotation, setUserRotation] = useState({ x: 0, y: 0 });
+
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+            const [viewStart, setViewStart] = useState({ x: 0, y: 0 }); 
+            const [rotationStart, setRotationStart] = useState({ x: 0, y: 0 });
+
+            const isSmooth = shapeType === 'cylinder' || shapeType === 'cone';
+            const renderSides = isSmooth ? 32 : sides;
+
+            // --- 產生層級幾何資料 ---
+            const initialFaces = useMemo(() => {
+                let rootNode;
+                const safeTop = Math.max(0, Math.min(topBasePosition, renderSides - 1));
+                const safeBottom = Math.max(0, Math.min(bottomBasePosition, renderSides - 1));
+                const safePyr = Math.max(0, Math.min(pyramidBasePosition, renderSides - 1));
+
+                const w = isSmooth ? (2 * baseSize * Math.sin(Math.PI / renderSides)) : baseSize;
+                const r = isSmooth ? baseSize : (baseSize / (2 * Math.sin(Math.PI / renderSides)));
+
+                const actualPrismNet = shapeType === 'cylinder' ? 'strip' : prismNetType;
+                const actualPyramidNet = shapeType === 'cone' ? 'chain' : pyramidNetType;
+
+                if (shapeType === 'cube') {
+                    rootNode = buildCubeNet(CUBE_NETS[cubeNetType], baseSize); 
+                } else if (shapeType === 'prism' || shapeType === 'cylinder') {
+                    if (actualPrismNet === 'strip') rootNode = buildPrismStrip(renderSides, w, r, shapeHeight, safeTop, safeBottom, isSmooth);
+                    else rootNode = buildPrismStar(renderSides, w, r, shapeHeight, safeTop, isSmooth);
+                } else {
+                    if (actualPyramidNet === 'chain') rootNode = buildPyramidFan(renderSides, w, r, shapeHeight, safePyr, isSmooth);
+                    else rootNode = buildPyramidStar(renderSides, w, r, shapeHeight, isSmooth);
+                }
+
+                const list = [];
+                const traverse = (node, parentWorldPoints = null, parentIndex = -1, parentEdgeIndex = -1) => {
+                    let worldPoints;
+                    if (!parentWorldPoints) worldPoints = node.localPoints.map(p => ({...p}));
+                    else {
+                        const p1_world = parentWorldPoints[parentEdgeIndex];
+                        const p2_world = parentWorldPoints[(parentEdgeIndex + 1) % parentWorldPoints.length];
+                        worldPoints = transformFace2D(node.localPoints, node.childEdge, p1_world, p2_world);
+                    }
+                    const faceIndex = list.length;
+                    list.push({ 
+                        id: node.id, 
+                        originalPoints: worldPoints, 
+                        hue: node.hue, 
+                        isBase: node.isBase, 
+                        text: node.text, 
+                        childConnections: [] 
+                    });
+                    if (parentIndex !== -1) {
+                        list[parentIndex].childConnections.push({ childFaceIdx: faceIndex, parentEdgeIndex: parentEdgeIndex, foldAngle: node.foldAngle });
+                    }
+                    if (node.children) {
+                        for (let child of node.children) traverse(child, worldPoints, faceIndex, child.parentEdge);
+                    }
+                };
+                traverse(rootNode);
+                return list;
+            }, [shapeType, prismNetType, pyramidNetType, cubeNetType, renderSides, baseSize, shapeHeight, topBasePosition, bottomBasePosition, pyramidBasePosition]);
+
+            useEffect(() => {
+                if (topBasePosition >= renderSides) setTopBasePosition(0);
+                if (bottomBasePosition >= renderSides) setBottomBasePosition(renderSides > 2 ? renderSides - 2 : 0);
+                if (pyramidBasePosition >= renderSides) setPyramidBasePosition(0);
+            }, [renderSides]);
+
+            // --- 動畫迴圈 ---
+            const startAnimation = () => {
+                if (isAnimating) { setIsAnimating(false); return; }
+                setIsAnimating(true); setAnimationProgress(0);
+                const duration = 2500; const startTime = Date.now();
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const rawProgress = Math.min(elapsed / duration, 1);
+                    const progress = rawProgress < 0.5 ? 4 * rawProgress * rawProgress * rawProgress : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
+                    setAnimationProgress(progress);
+                    if (rawProgress < 1) requestAnimationFrame(animate);
+                    else setIsAnimating(false);
+                };
+                requestAnimationFrame(animate);
+            };
+
+            const resetAnimation = () => { setIsAnimating(false); setAnimationProgress(0); };
+            const resetPositions = () => { setTopBasePosition(0); setBottomBasePosition(renderSides > 2 ? renderSides - 2 : 0); setPyramidBasePosition(0); resetAnimation(); };
+            const resetView = () => { setView({ x: 0, y: 0, scale: 1 }); setUserRotation({ x: 0, y: 0 }); };
+
+            const handleStart = (clientX, clientY) => {
+                setIsDragging(true); setDragStart({ x: clientX, y: clientY });
+                setViewStart({ x: view.x, y: view.y }); setRotationStart({ x: userRotation.x, y: userRotation.y });
+            };
+            const handleMove = (clientX, clientY) => {
+                if (!isDragging) return;
+                const dx = clientX - dragStart.x; const dy = clientY - dragStart.y;
+                if (interactionMode === 'pan') setView(prev => ({ ...prev, x: viewStart.x + dx, y: viewStart.y + dy }));
+                else setUserRotation({ x: rotationStart.x + dy * 0.01, y: rotationStart.y - dx * 0.01 });
+            };
+            const handleMouseUp = () => setIsDragging(false);
+            const handleWheel = (e) => { e.preventDefault(); setView(prev => ({ ...prev, scale: Math.max(0.1, Math.min(prev.scale - e.deltaY * 0.001, 5)) })); };
+
+            // --- 核心算繪 ---
+            const renderPolygons = () => {
+                const centerX = 400; const centerY = 250;
+                const TARGET_VIEW_X = 25 * (Math.PI / 180);
+                const TARGET_VIEW_Y = 30 * (Math.PI / 180);
+                const totalViewX = (animationProgress * TARGET_VIEW_X) + userRotation.x;
+                const totalViewY = (animationProgress * TARGET_VIEW_Y) + userRotation.y;
+
+                const FOLD_SIGN = -1; 
+                let currentFaces = initialFaces.map(f => ({ ...f, points: f.originalPoints.map(p => ({...p})) }));
+                
+                const applyTransform = (faceIndex) => {
+                    const face = currentFaces[faceIndex];
+                    for (let childInfo of face.childConnections) {
+                        const p1 = face.points[childInfo.parentEdgeIndex];
+                        const p2 = face.points[(childInfo.parentEdgeIndex + 1) % face.points.length];
+                        const axis = Vec3.sub(p2, p1);
+                        const angle = childInfo.foldAngle * animationProgress * FOLD_SIGN;
+                        
+                        const rotateSubtree = (nodeIdx) => {
+                            const nodeFace = currentFaces[nodeIdx];
+                            nodeFace.points = nodeFace.points.map(p => rotateAroundAxis(p, p1, axis, angle));
+                            for (let grandChild of nodeFace.childConnections) rotateSubtree(grandChild.childFaceIdx);
+                        };
+                        rotateSubtree(childInfo.childFaceIdx);
+                        applyTransform(childInfo.childFaceIdx);
+                    }
+                };
+                if (currentFaces.length > 0) applyTransform(0);
+
+                let sumX=0, sumY=0, sumZ=0, ptCount=0;
+                currentFaces.forEach(f => f.points.forEach(p => { sumX+=p.x; sumY+=p.y; sumZ+=p.z; ptCount++; }));
+                const cx = sumX/ptCount, cy = sumY/ptCount, cz = sumZ/ptCount;
+
+                const actualPrismNet = shapeType === 'cylinder' ? 'strip' : prismNetType;
+                let needsStandUp = false;
+                if (shapeType === 'pyramid' || shapeType === 'cone' || shapeType === 'cube' || actualPrismNet === 'star') {
+                    needsStandUp = true;
+                }
+
+                if (needsStandUp) {
+                    // 【修正】：將旋轉角度改為正值 (+90度)，在 SVG 畫布中這會讓頂點朝上 (負 Y 軸方向)
+                    const globalAngle = animationProgress * (Math.PI / 2);
+                    const cosA = Math.cos(globalAngle);
+                    const sinA = Math.sin(globalAngle);
+                    currentFaces.forEach(f => {
+                        f.points = f.points.map(p => {
+                            const tx = p.x - cx;
+                            const ty = p.y - cy;
+                            const tz = p.z - cz;
+                            return {
+                                x: tx + cx,
+                                y: ty * cosA - tz * sinA + cy,
+                                z: ty * sinA + tz * cosA + cz
+                            };
+                        });
+                    });
+                }
+
+                let splitFaces = [];
+                currentFaces.forEach(face => {
+                    if (face.isBase && isSmooth) {
+                        let center_x = 0, center_y = 0, center_z = 0;
+                        const len = face.points.length;
+                        face.points.forEach(p => { center_x += p.x; center_y += p.y; center_z += p.z; });
+                        center_x /= len; center_y /= len; center_z /= len;
+                        const centerNode = { x: center_x, y: center_y, z: center_z };
+                        
+                        for(let i=0; i<len; i++) {
+                            const p1 = face.points[i];
+                            const p2 = face.points[(i+1)%len];
+                            splitFaces.push({
+                                ...face,
+                                id: `${face.id}-tessellated-${i}`,
+                                points: [centerNode, p1, p2],
+                                text: i === 0 ? face.text : '' 
+                            });
+                        }
+                    } else {
+                        splitFaces.push(face);
+                    }
+                });
+                currentFaces = splitFaces;
+
+                const fov = 1000;
+                const projectedFaces = currentFaces.map(face => {
+                    const view3D = face.points.map(p => {
+                        const px = p.x - cx; const py = p.y - cy; const pz = p.z - cz;
+                        const x1 = px * Math.cos(totalViewY) - pz * Math.sin(totalViewY);
+                        const z1 = px * Math.sin(totalViewY) + pz * Math.cos(totalViewY);
+                        const y2 = py * Math.cos(totalViewX) - z1 * Math.sin(totalViewX);
+                        const z2 = py * Math.sin(totalViewX) + z1 * Math.cos(totalViewX);
+                        return { x: x1, y: y2, z: z2 };
+                    });
+
+                    const projPts = view3D.map(v => {
+                        const perspective = fov / (fov + v.z);
+                        return { x: centerX + v.x * perspective, y: centerY + v.y * perspective, z: v.z };
+                    });
+
+                    const avgZ = view3D.reduce((sum, v) => sum + v.z, 0) / view3D.length;
+                    
+                    let area = 0;
+                    for(let i=0; i<projPts.length; i++) {
+                        const j = (i+1)%projPts.length;
+                        area += (projPts[i].x * projPts[j].y - projPts[j].x * projPts[i].y);
+                    }
+                    const isFront = area > 0;
+
+                    let finalZIndex = avgZ;
+
+                    // 【重點修正】：專門解決圓錐在特定視角下，底面與側面因深度運算相同而造成的破圖與顏色錯置
+                    if (shapeType === 'cone') {
+                        if (face.isBase) {
+                            if (!isFront) {
+                                // 當圓錐的底面背對相機（從上方看）時，強制給予極大的深度懲罰，使其必在最底層渲染
+                                finalZIndex += 2000;
+                            } else {
+                                // 當圓錐的底面朝向相機（從下方看）時，強制拉到最前層，完美覆蓋內部側面
+                                finalZIndex -= 2000;
+                            }
+                        } else {
+                            if (!isFront) {
+                                // 側面背對相機時，推到後方，但要在背對的底面之上
+                                finalZIndex += 1000;
+                            }
+                        }
+                    }
+
+                    const v1 = Vec3.sub(view3D[1], view3D[0]);
+                    const v2 = Vec3.sub(view3D[2], view3D[1]);
+                    let normal = Vec3.cross(v1, v2);
+                    let faceColor = `hsl(${face.hue}, 70%, 75%)`; 
+                    let strokeColor = isSmooth ? 'none' : '#333';
+                    
+                    if (Vec3.mag(normal) > 0) {
+                        normal = Vec3.normalize(normal);
+                        const lightDir = Vec3.normalize({x: 0.5, y: -0.8, z: -1.5});
+                        const diffuse = Math.abs(Vec3.dot(normal, lightDir)); 
+                        
+                        let h = face.hue;
+                        let s = 75;
+                        
+                        if (isSmooth && !face.isBase) {
+                            h = shapeType === 'cylinder' ? 190 : 280; 
+                            s = 65;
+                        }
+                        
+                        const minL = face.isBase ? 40 : (isSmooth ? 30 : 45);
+                        const maxL = face.isBase ? 75 : (isSmooth ? 85 : 80);
+                        const l = minL + diffuse * (maxL - minL);
+                        
+                        faceColor = `hsl(${h}, ${s}%, ${l}%)`;
+                        if (isSmooth) strokeColor = faceColor; 
+                    }
+
+                    return { ...face, projectedPoints: projPts, zIndex: finalZIndex, isFront, faceColor, strokeColor };
+                });
+
+                projectedFaces.sort((a, b) => b.zIndex - a.zIndex); 
+
+                return projectedFaces.map((face, idx) => {
+                    const d = face.projectedPoints.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+                    const tx = face.projectedPoints.reduce((s,p)=>s+p.x,0)/face.projectedPoints.length;
+                    const ty = face.projectedPoints.reduce((s,p)=>s+p.y,0)/face.projectedPoints.length;
+                    
+                    return (
+                        <g key={`${face.id}-${idx}`}>
+                            <path d={d} fill={face.faceColor} stroke={face.strokeColor} strokeWidth={isSmooth ? 1 : 1.5} strokeLinejoin="round" />
+                            {face.text && face.isFront && animationProgress < 0.6 && (() => {
+                                const lines = face.text.split('\n');
+                                return (
+                                <text x={tx} y={ty} textAnchor="middle" fill="#333" fontSize="12" fontWeight="bold" pointerEvents="none" opacity={1 - animationProgress*1.5}>
+                                    {lines.map((line, i) => <tspan key={i} x={tx} dy={i===0 ? (lines.length>1?"-0.15em":"0.3em") : "1.1em"}>{line}</tspan>)}
+                                </text>
+                                );
+                            })()}
+                        </g>
+                    );
+                });
+            };
+
+            return (
+                <div className="w-full max-w-6xl mx-auto bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-xl font-sans overflow-hidden border border-slate-200">
+                    <div className="p-6">
+                        <h1 className="text-2xl md:text-3xl font-bold text-center mb-6 text-slate-800 flex items-center justify-center gap-3">
+                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">立體圖形展開與組合 / 3D Folding Explorer</span>
+                        </h1>
+                        
+                        <div className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-100">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3"><IconInfo /> 選擇形狀 / Select Shape</label>
+                                        <div className="grid grid-cols-3 sm:grid-cols-5 bg-slate-100 p-1 rounded-lg gap-1">
+                                            {['prism', 'pyramid', 'cylinder', 'cone', 'cube'].map(type => (
+                                                <button key={type} onClick={() => { setShapeType(type); resetPositions(); resetView(); }} 
+                                                    className={`py-2 rounded-md text-xs sm:text-sm font-bold transition-all ${shapeType === type ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+                                                    {{'prism':'角柱 Prism', 'pyramid':'角錐 Pyramid', 'cylinder':'圓柱 Cylinder', 'cone':'圓錐 Cone', 'cube':'正方體 Cube'}[type].split(' ').map((t,i) => <span key={i}>{t}<br/></span>)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 動態屬性面板 */}
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+                                        {/* 正方體特有面板 */}
+                                        {shapeType === 'cube' && (
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-3 text-indigo-700">正方體展開圖 (11種) / 11 Cube Nets</label>
+                                                <div className="grid grid-cols-6 gap-1.5">
+                                                    <div className="col-span-6 text-xs text-slate-500 font-bold mt-1">1-4-1 型 (6種)</div>
+                                                    {[0,1,2,3,4,5].map(i => (
+                                                        <button key={i} onClick={() => { setCubeNetType(i); resetAnimation(); resetView(); }} className={`py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === i ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>{i+1}</button>
+                                                    ))}
+                                                    <div className="col-span-6 text-xs text-slate-500 font-bold mt-2">2-3-1 型 (3種)</div>
+                                                    {[6,7,8].map(i => (
+                                                        <button key={i} onClick={() => { setCubeNetType(i); resetAnimation(); resetView(); }} className={`col-span-2 py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === i ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>型 {i+1}</button>
+                                                    ))}
+                                                    <div className="col-span-6 text-xs text-slate-500 font-bold mt-2">2-2-2 型 與 3-3 型</div>
+                                                    <button onClick={() => { setCubeNetType(9); resetAnimation(); resetView(); }} className={`col-span-3 py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === 9 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>型 10 (2-2-2)</button>
+                                                    <button onClick={() => { setCubeNetType(10); resetAnimation(); resetView(); }} className={`col-span-3 py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === 10 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>型 11 (3-3)</button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 一般多面體面板 */}
+                                        {shapeType !== 'cube' && (
+                                            <>
+                                                {(shapeType === 'prism' || shapeType === 'pyramid') && (
+                                                    <div>
+                                                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2"><IconGrid /> 展開圖樣式 / Net Type</label>
+                                                        <div className="flex bg-white border border-slate-200 p-1 rounded-lg">
+                                                            {shapeType === 'prism' ? (
+                                                                <>
+                                                                    <button onClick={() => { setPrismNetType('strip'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${prismNetType === 'strip' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconStrip /> <span>鏈狀展開</span></button>
+                                                                    <button onClick={() => { setPrismNetType('star'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${prismNetType === 'star' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconStar /> <span>星形展開</span></button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button onClick={() => { setPyramidNetType('star'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${pyramidNetType === 'star' ? 'bg-pink-50 text-pink-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconGrid /> <span>星形展開</span></button>
+                                                                    <button onClick={() => { setPyramidNetType('chain'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${pyramidNetType === 'chain' ? 'bg-pink-50 text-pink-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconFan /> <span>扇形展開</span></button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {!isSmooth && (
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-2">底面邊數 / Sides: <span className="text-blue-600 text-lg">{sides}</span></label>
+                                                        <input type="range" min="3" max="12" value={sides} onChange={(e) => { setSides(parseInt(e.target.value)); resetPositions(); resetView(); }} className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        
+                                        {/* 通用尺寸調整 */}
+                                        <div className="pt-2 border-t border-slate-200">
+                                            <label className="block text-sm font-bold text-slate-700 mb-3 text-emerald-700">尺寸調整 / Dimensions</label>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
+                                                        <span>{shapeType === 'cube' ? '正方體大小 / Cube Size' : (isSmooth ? '底面半徑 / Base Radius' : '底面側邊長度 / Base Edge Length')}</span>
+                                                        <span className="text-emerald-600">{baseSize}</span>
+                                                    </div>
+                                                    <input type="range" min="20" max="150" value={baseSize} onChange={(e) => { setBaseSize(parseInt(e.target.value)); resetView(); }} className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                                                </div>
+                                                {shapeType !== 'cube' && (
+                                                    <div>
+                                                        <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
+                                                            <span>側面高度 / Height</span>
+                                                            <span className="text-emerald-600">{shapeHeight}</span>
+                                                        </div>
+                                                        <input type="range" min="20" max="250" value={shapeHeight} onChange={(e) => { setShapeHeight(parseInt(e.target.value)); resetView(); }} className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-col justify-between">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-3">動畫控制 / Animation</label>
+                                        <div className="flex gap-3 mb-4">
+                                            <button onClick={startAnimation} className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-white font-bold transition-all ${isAnimating ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200'}`}>{isAnimating ? <><IconPause /> <span className="ml-2">暫停 Pause</span></> : <><IconPlay /> <span className="ml-2">播放 Play</span></>}</button>
+                                            <button onClick={resetAnimation} className="px-4 py-3 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-all font-bold"><IconRotateCcw /></button>
+                                        </div>
+                                        <div className="relative pt-1">
+                                            <div className="flex justify-between text-xs font-bold text-slate-500 mb-2"><span>平面展開 (2D Net)</span><span>立體模型 (3D Solid)</span></div>
+                                            <input type="range" min="0" max="1" step="0.01" value={animationProgress} onChange={(e) => { setAnimationProgress(parseFloat(e.target.value)); setIsAnimating(false); }} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600" />
+                                        </div>
+                                    </div>
+
+                                    {/* 動態拓撲連接點調整 */}
+                                    {((shapeType === 'prism' && prismNetType === 'strip') || shapeType === 'cylinder') && animationProgress < 0.2 && (
+                                        <div className="mt-4 pt-4 border-t border-slate-100 bg-blue-50/50 p-4 rounded-xl">
+                                            <p className="text-xs text-slate-700 mb-3 font-bold flex items-center gap-1">✨ 調整展開圖拓撲 (Topology Configurator)</p>
+                                            <div className="flex gap-4">
+                                                <div className="flex-1">
+                                                    <span className="text-xs text-yellow-700 font-bold block mb-1">上底連接點</span>
+                                                    <div className="flex gap-1"><button onClick={() => setTopBasePosition(p => Math.max(0, p-1))} className="bg-white border border-yellow-200 text-yellow-700 hover:bg-yellow-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">←</button><div className="flex-1 text-center text-xs font-bold py-1 bg-yellow-100 text-yellow-800 rounded border border-yellow-200">側 {topBasePosition+1}</div><button onClick={() => setTopBasePosition(p => Math.min(renderSides-1, p+1))} className="bg-white border border-yellow-200 text-yellow-700 hover:bg-yellow-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">→</button></div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <span className="text-xs text-orange-700 font-bold block mb-1">下底連接點</span>
+                                                    <div className="flex gap-1"><button onClick={() => setBottomBasePosition(p => Math.max(0, p-1))} className="bg-white border border-orange-200 text-orange-700 hover:bg-orange-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">←</button><div className="flex-1 text-center text-xs font-bold py-1 bg-orange-100 text-orange-800 rounded border border-orange-200">側 {bottomBasePosition+1}</div><button onClick={() => setBottomBasePosition(p => Math.min(renderSides-1, p+1))} className="bg-white border border-orange-200 text-orange-700 hover:bg-orange-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">→</button></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {((shapeType === 'pyramid' && pyramidNetType === 'chain') || shapeType === 'cone') && animationProgress < 0.2 && (
+                                        <div className="mt-4 pt-4 border-t border-slate-100 bg-pink-50/50 p-4 rounded-xl">
+                                            <p className="text-xs text-slate-700 mb-3 font-bold flex items-center gap-1">✨ 調整展開圖拓撲 (Topology Configurator)</p>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => setPyramidBasePosition(p => Math.max(0, p-1))} className="bg-white shadow-sm border border-pink-200 text-pink-700 hover:bg-pink-50 px-3 py-1.5 rounded font-bold text-sm">←</button>
+                                                <div className="flex-1 text-center font-bold text-pink-800 text-xs bg-pink-100 py-1.5 rounded border border-pink-200">底面接在第 <span className="text-base mx-1">{pyramidBasePosition + 1}</span> 塊側面</div>
+                                                <button onClick={() => setPyramidBasePosition(p => Math.min(renderSides-1, p+1))} className="bg-white shadow-sm border border-pink-200 text-pink-700 hover:bg-pink-50 px-3 py-1.5 rounded font-bold text-sm">→</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-800 rounded-xl p-2 shadow-inner relative overflow-hidden noselect">
+                            <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-white border border-slate-600 pointer-events-none">
+                                {animationProgress < 0.05 ? '平面展開圖 (2D Net)' : animationProgress > 0.95 ? '立體圖形 (3D Solid)' : '組合中... (Rigid Body Folding)'}
+                            </div>
+                            
+                            <div className="absolute top-4 right-4 z-10 flex gap-2">
+                                <div className="bg-black/50 backdrop-blur rounded-lg border border-slate-600 flex overflow-hidden">
+                                    <button onClick={() => setInteractionMode('pan')} className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-colors ${interactionMode === 'pan' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-slate-300'}`}><IconMove /> 平移</button>
+                                    <div className="w-px bg-slate-600"></div>
+                                    <button onClick={() => setInteractionMode('rotate')} className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-colors ${interactionMode === 'rotate' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-slate-300'}`}><Icon3DRotate /> 旋轉</button>
+                                </div>
+                                <button onClick={resetView} className="bg-black/50 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-600 transition-colors">重置視角</button>
+                            </div>
+
+                            <svg 
+                                viewBox="0 0 800 500" 
+                                className={`w-full h-auto bg-slate-900 rounded-lg touch-none shadow-2xl ${isDragging ? (interactionMode === 'pan' ? 'cursor-grabbing' : 'cursor-rotate') : (interactionMode === 'pan' ? 'cursor-grab' : 'cursor-rotate')}`}
+                                onMouseDown={(e) => { if (e.button===0) handleStart(e.clientX, e.clientY); }}
+                                onMouseMove={(e) => { e.preventDefault(); handleMove(e.clientX, e.clientY); }}
+                                onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
+                                onWheel={handleWheel}
+                                onTouchStart={(e) => { if(e.touches.length===1) handleStart(e.touches[0].clientX, e.touches[0].clientY); }}
+                                onTouchMove={(e) => { if(e.touches.length===1) handleMove(e.touches[0].clientX, e.touches[0].clientY); }}
+                                onTouchEnd={handleMouseUp}
+                            >
+                                <defs>
+                                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#334155" strokeWidth="1"/></pattern>
+                                </defs>
+                                
+                                <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
+                                    <rect x="-2000" y="-2000" width="4000" height="4000" fill="url(#grid)" />
+                                    {renderPolygons()}
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PrismPyramidNet />);
+    </script>
+</body>
+</html>

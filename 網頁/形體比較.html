@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 立體圖形實驗室 (3D Geometry Lab)</title>
+    
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+        }
+        input[type=range] {
+            accent-color: #4f46e5;
+        }
+        .noselect {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* 游標樣式優化 */
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
+        .cursor-move-item { cursor: move; }      
+        .cursor-ns-resize { cursor: ns-resize; } 
+        .cursor-rotate { cursor: alias; } 
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .mix-multiply {
+            mix-blend-mode: multiply;
+        }
+        
+        /* 移除輸入框的上下箭頭，讓介面更乾淨 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-2 md:p-4 flex flex-col items-center">
+
+    <div id="root" class="w-full max-w-7xl"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- 圖示組件 ---
+        const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+        const IconCopy = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
+        
+        // 形體圖示 (Shapes Icons)
+        const IconCube = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>;
+        const IconPyramid = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 2 22h20L12 2Z" /><path d="m2 22 10-5 10 5" /></svg>;
+        const IconCylinder = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 5v14c0 1.66-4 3-9 3s-9-1.34-9-3V5" /></svg>;
+        const IconCone = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98" /><ellipse cx="12" cy="19" rx="9" ry="3" /></svg>;
+        const IconSphere = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
+
+        const IconMovePlanar = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>;
+        const IconMoveVertical = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/><path d="m5 12 7 7 7-7"/></svg>; 
+        const IconRotate3D = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>;
+        const IconHand = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>;
+        const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+        const IconStack = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/><path d="m2 7 10 5 10-5"/><path d="M12 22V7"/></svg>;
+        const IconRefresh = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+        const IconPan = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>; 
+        const IconCoords = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="12" cy="12" r="1"/></svg>;
+        const IconPalette = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>;
+        const IconList = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
+
+        // --- 雙語名稱對照表 (Bilingual Names) ---
+        const SHAPE_NAMES = {
+            prism: '角柱 (Prism)',
+            pyramid: '角錐 (Pyramid)',
+            cylinder: '圓柱 (Cylinder)',
+            cone: '圓錐 (Cone)',
+            sphere: '球體 (Sphere)'
+        };
+
+        // --- 預設參數 (單位：公分 cm) ---
+        const DEFAULT_PARAMS = {
+            prism: { type: 'prism', sides: 4, baseSize: 5, height: 10, y: 0 },
+            pyramid: { type: 'pyramid', sides: 4, baseSize: 5, height: 12, y: 0 },
+            cylinder: { type: 'cylinder', sides: 32, baseSize: 5, height: 10, y: 0 },
+            cone: { type: 'cone', sides: 32, baseSize: 5, height: 12, y: 0 },
+            sphere: { type: 'sphere', sides: 24, baseSize: 5, height: 0, y: 0 }
+        };
+
+        // --- 顏色調色盤 (淡彩色系 - Bilingual) ---
+        const PASTEL_COLORS = [
+            { hue: 350, name: '櫻花粉 (Pink)', bg: '#fecdd3' }, 
+            { hue: 30,  name: '蜜桃橘 (Orange)', bg: '#fed7aa' }, 
+            { hue: 50,  name: '檸檬黃 (Yellow)', bg: '#fef08a' }, 
+            { hue: 150, name: '薄荷綠 (Green)', bg: '#bbf7d0' }, 
+            { hue: 200, name: '天空藍 (Blue)', bg: '#bae6fd' }, 
+            { hue: 270, name: '薰衣草 (Purple)', bg: '#ddd6fe' }, 
+            { hue: 0,   name: '中性灰 (Gray)', bg: '#e2e8f0', sat: 0 }, 
+        ];
+
+        const GeometryLab = () => {
+            // 比例尺：1 cm = 10 像素
+            const UNIT_SCALE = 10; 
+
+            const [shapes, setShapes] = useState([
+                { id: 1, x: 0, z: 0, colorHue: 200, ...DEFAULT_PARAMS.cylinder }
+            ]);
+            const [selectedShapeId, setSelectedShapeId] = useState(1);
+            
+            // 視圖與互動模式 
+            const [interactionMode, setInteractionMode] = useState('moveItem'); 
+            const [view, setView] = useState({ x: 0, y: 0, scale: 1 }); 
+            const [userRotation, setUserRotation] = useState({ x: 25 * (Math.PI / 180), y: 30 * (Math.PI / 180) }); 
+
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+            const [viewStart, setViewStart] = useState({ x: 0, y: 0 });
+            const [rotationStart, setRotationStart] = useState({ x: 0, y: 0 });
+            const [shapeStartPos, setShapeStartPos] = useState({ x: 0, z: 0, y: 0 }); 
+
+            const svgRef = useRef(null);
+
+            // --- 3D 渲染常數 ---
+            const CX = 400;
+            const CY = 300;
+            const FOCAL_LENGTH = 3500; 
+
+            // --- 投影函數 ---
+            const project3D = (x, y, z) => {
+                let x1 = x * Math.cos(userRotation.y) - z * Math.sin(userRotation.y);
+                let z1 = x * Math.sin(userRotation.y) + z * Math.cos(userRotation.y);
+                
+                let y2 = y * Math.cos(userRotation.x) - z1 * Math.sin(userRotation.x);
+                let z2 = y * Math.sin(userRotation.x) + z1 * Math.cos(userRotation.x);
+                
+                const scale = FOCAL_LENGTH / (FOCAL_LENGTH + z2); 
+                
+                return { 
+                    x: CX + x1 * scale, 
+                    y: CY + y2 * scale, 
+                    z: z2,
+                    scale: scale 
+                };
+            };
+
+            // --- 形體操作 ---
+            const addShape = (type) => {
+                const newId = Date.now();
+                // User requested default position (0,0,0)
+                const newShape = {
+                    id: newId,
+                    x: 0, 
+                    z: 0,
+                    colorHue: PASTEL_COLORS[Math.floor(Math.random() * 6)].hue, 
+                    ...DEFAULT_PARAMS[type]
+                };
+                
+                setShapes([...shapes, newShape]);
+                setSelectedShapeId(newId);
+                setInteractionMode('moveItem'); 
+            };
+
+            const removeShape = (id, e) => {
+                e && e.stopPropagation();
+                const newShapes = shapes.filter(s => s.id !== id);
+                setShapes(newShapes);
+                if (selectedShapeId === id) {
+                    setSelectedShapeId(newShapes.length > 0 ? newShapes[0].id : null);
+                }
+            };
+
+            // 複製形體
+            const duplicateShape = (e) => {
+                e.stopPropagation();
+                if (!selectedShapeId) return;
+
+                const original = shapes.find(s => s.id === selectedShapeId);
+                if (!original) return;
+
+                const newId = Date.now();
+                const newShape = {
+                    ...original,
+                    id: newId,
+                    x: original.x + 3, // 稍微位移，單位 cm
+                    z: original.z + 3
+                };
+
+                setShapes([...shapes, newShape]);
+                setSelectedShapeId(newId);
+                setInteractionMode('moveItem');
+            };
+
+            const updateSelectedShape = (key, value) => {
+                setShapes(shapes.map(s => s.id === selectedShapeId ? { ...s, [key]: value } : s));
+            };
+
+            const resetView = () => {
+                setView({ x: 0, y: 0, scale: 1 });
+                setUserRotation({ x: 25 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
+            };
+
+            // --- 互動事件處理 ---
+            const handleMouseDown = (e) => {
+                if (e.button !== 0) return;
+                setIsDragging(true);
+                setDragStart({ x: e.clientX, y: e.clientY });
+                setViewStart({ ...view });
+                setRotationStart({ ...userRotation });
+                
+                const selected = shapes.find(s => s.id === selectedShapeId);
+                if (selected) setShapeStartPos({ x: selected.x, z: selected.z, y: selected.y });
+            };
+
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const dx = e.clientX - dragStart.x;
+                const dy = e.clientY - dragStart.y;
+
+                if (interactionMode === 'pan') {
+                    setView(prev => ({ ...prev, x: viewStart.x + dx, y: viewStart.y + dy }));
+                } else if (interactionMode === 'rotate') {
+                    const ROTATION_SPEED = 0.005;
+                    setUserRotation({
+                        x: Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationStart.x + dy * ROTATION_SPEED)), 
+                        y: rotationStart.y - dx * ROTATION_SPEED
+                    });
+                } else if (interactionMode === 'moveItem' && selectedShapeId) {
+                    const cos = Math.cos(userRotation.y);
+                    const sin = Math.sin(userRotation.y);
+                    const scaleFactor = (1.5 / view.scale) / UNIT_SCALE; 
+                    const speed = 10.0;
+                    
+                    const worldDx = (dx * cos - dy * sin) * scaleFactor * speed;
+                    const worldDz = (dx * sin + dy * cos) * scaleFactor * speed;
+                    
+                    updateSelectedShape('x', shapeStartPos.x + worldDx);
+                    updateSelectedShape('z', shapeStartPos.z - worldDz);
+                } else if (interactionMode === 'liftItem' && selectedShapeId) {
+                    const scaleFactor = (2 / view.scale) / UNIT_SCALE; 
+                    const speed = 10.0;
+                    const deltaHeight = -dy * scaleFactor * speed; 
+                    const newY = Math.max(0, Math.min(100, shapeStartPos.y + deltaHeight)); 
+                    updateSelectedShape('y', newY);
+                }
+            };
+
+            const handleMouseUp = () => setIsDragging(false);
+
+            const handleWheel = (e) => {
+                e.preventDefault();
+                const scaleAmount = -e.deltaY * 0.001;
+                const newScale = Math.max(0.1, Math.min(view.scale + scaleAmount, 10)); 
+                setView(prev => ({ ...prev, scale: newScale }));
+            };
+            
+            const handleTouchStart = (e) => {
+                if(e.touches.length === 1) {
+                    setIsDragging(true);
+                    setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+                    setViewStart({ ...view });
+                    setRotationStart({ ...userRotation });
+                    const selected = shapes.find(s => s.id === selectedShapeId);
+                    if (selected) setShapeStartPos({ x: selected.x, z: selected.z, y: selected.y });
+                }
+            };
+
+            const handleTouchMove = (e) => {
+                if(isDragging && e.touches.length === 1) {
+                    const clientX = e.touches[0].clientX;
+                    const clientY = e.touches[0].clientY;
+                    
+                    const dx = clientX - dragStart.x;
+                    const dy = clientY - dragStart.y;
+
+                    if (interactionMode === 'pan') {
+                        setView(prev => ({ ...prev, x: viewStart.x + dx, y: viewStart.y + dy }));
+                    } else if (interactionMode === 'rotate') {
+                        const ROTATION_SPEED = 0.005;
+                        setUserRotation({
+                            x: Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationStart.x + dy * ROTATION_SPEED)), 
+                            y: rotationStart.y - dx * ROTATION_SPEED
+                        });
+                    } else if (interactionMode === 'moveItem' && selectedShapeId) {
+                        const cos = Math.cos(userRotation.y);
+                        const sin = Math.sin(userRotation.y);
+                        const scaleFactor = (1.5 / view.scale) / UNIT_SCALE; 
+                        const speed = 10.0;
+                        const worldDx = (dx * cos - dy * sin) * scaleFactor * speed;
+                        const worldDz = (dx * sin + dy * cos) * scaleFactor * speed;
+                        updateSelectedShape('x', shapeStartPos.x + worldDx);
+                        updateSelectedShape('z', shapeStartPos.z - worldDz);
+                    } else if (interactionMode === 'liftItem' && selectedShapeId) {
+                        const scaleFactor = (2 / view.scale) / UNIT_SCALE; 
+                        const speed = 10.0;
+                        const deltaHeight = -dy * scaleFactor * speed; 
+                        const newY = Math.max(0, Math.min(100, shapeStartPos.y + deltaHeight));
+                        updateSelectedShape('y', newY);
+                    }
+                }
+            };
+            
+            // --- 幾何生成 ---
+            const generateShapePolygons = (shape) => {
+                const scale = UNIT_SCALE;
+                const { id, type, sides, baseSize, height: heightCm, colorHue, x: xCm, z: zCm, y: yCm } = shape;
+                
+                const worldX = xCm * scale;
+                const worldZ = zCm * scale;
+                const elevation = yCm * scale;
+                const height = heightCm * scale;
+
+                const isSmooth = type === 'cylinder' || type === 'cone' || type === 'sphere';
+                const renderSides = isSmooth ? (type === 'sphere' ? 24 : 32) : sides;
+                
+                let radius;
+                
+                if (type === 'sphere') {
+                    radius = baseSize * scale;
+                } else if (isSmooth && type !== 'sphere') {
+                    radius = baseSize * scale;
+                } else {
+                    const sideLengthPx = baseSize * scale;
+                    radius = sideLengthPx / (2 * Math.sin(Math.PI / renderSides));
+                }
+
+                const polygons = [];
+                const highlight = selectedShapeId === id;
+                const strokeColor = highlight ? '#ef4444' : `hsla(${colorHue}, 60%, 30%, 0.5)`; 
+                const strokeWidth = highlight ? 2 : 1;
+                
+                const isGray = colorHue === 0 && shape.colorHue === 0; 
+                const saturation = isGray ? '0%' : '85%';
+                
+                const baseFillColor = (lightness) => `hsla(${colorHue}, ${saturation}, ${lightness}%, 0.6)`; 
+
+                // --- 1. 球體 (Sphere) ---
+                if (type === 'sphere') {
+                    const sphereCenterY = -(elevation + radius);
+                    const centerPoint = { x: worldX, y: sphereCenterY, z: worldZ };
+                    
+                    polygons.push({
+                        shapeId: id,
+                        type: 'sphere',
+                        center: centerPoint,
+                        radius: radius,
+                        color: baseFillColor(75),
+                        stroke: strokeColor,
+                        strokeWidth: strokeWidth,
+                        highlight: highlight
+                    });
+                }
+                
+                // --- 2. 柱體 (Prism / Cylinder) ---
+                else if (type === 'prism' || type === 'cylinder') {
+                    const bottomY = -elevation;
+                    const topY = -elevation - height;
+                    const bottomPts = [];
+                    const topPts = [];
+
+                    for(let i=0; i<renderSides; i++) {
+                        const angle = (2 * Math.PI * i) / renderSides - Math.PI/2;
+                        const x = worldX + radius * Math.cos(angle);
+                        const z = worldZ + radius * Math.sin(angle);
+                        bottomPts.push({ x, y: bottomY, z });
+                        topPts.push({ x, y: topY, z });
+                    }
+
+                    // 側面
+                    for(let i=0; i<renderSides; i++) {
+                        const next = (i + 1) % renderSides;
+                        const faceLightness = 75 + (i % 2) * 5; 
+                        polygons.push({
+                            shapeId: id,
+                            points: [topPts[i], topPts[next], bottomPts[next], bottomPts[i]],
+                            color: baseFillColor(faceLightness),
+                            stroke: isSmooth ? 'none' : strokeColor,
+                            strokeWidth: strokeWidth
+                        });
+                    }
+                    // 頂底面
+                    polygons.push({ shapeId: id, points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                    polygons.push({ shapeId: id, points: topPts, color: baseFillColor(80), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                }
+                
+                // --- 3. 錐體 (Pyramid / Cone) ---
+                else if (type === 'pyramid' || type === 'cone') {
+                    const bottomY = -elevation;
+                    const apexY = -elevation - height;
+                    const apexPoint = { x: worldX, y: apexY, z: worldZ };
+                    const bottomPts = [];
+
+                    for(let i=0; i<renderSides; i++) {
+                        const angle = (2 * Math.PI * i) / renderSides - Math.PI/2;
+                        bottomPts.push({ x: worldX + radius * Math.cos(angle), y: bottomY, z: worldZ + radius * Math.sin(angle) });
+                    }
+
+                    // 底面
+                    polygons.push({ shapeId: id, points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+
+                    // 側面
+                    for(let i=0; i<renderSides; i++) {
+                        const next = (i + 1) % renderSides;
+                        const faceLightness = 75 + (i % 2) * 5;
+                        polygons.push({
+                            shapeId: id,
+                            points: [bottomPts[i], bottomPts[next], apexPoint],
+                            color: baseFillColor(faceLightness),
+                            stroke: isSmooth ? 'none' : strokeColor,
+                            strokeWidth: strokeWidth
+                        });
+                    }
+                }
+
+                return polygons;
+            };
+
+            const createPath = (points) => {
+                if (!points || points.length === 0) return '';
+                return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+            };
+
+            // 渲染場景
+            const renderScene = () => {
+                let allPolys = shapes.flatMap(generateShapePolygons);
+
+                const projectedPolys = allPolys.map(poly => {
+                    if (poly.type === 'sphere') {
+                        const projCenter = project3D(poly.center.x, poly.center.y, poly.center.z);
+                        const projRadius = poly.radius * projCenter.scale;
+                        
+                        return {
+                            ...poly,
+                            projCenter,
+                            projRadius,
+                            zIndex: projCenter.z - poly.radius * 0.5 
+                        };
+                    } else {
+                        const projPoints = poly.points.map(p => project3D(p.x, p.y, p.z));
+                        const zSum = projPoints.reduce((sum, p) => sum + p.z, 0);
+                        const zAvg = zSum / projPoints.length;
+                        return {
+                            ...poly,
+                            projPoints,
+                            zIndex: zAvg
+                        };
+                    }
+                });
+
+                // Z-Sort
+                projectedPolys.sort((a, b) => b.zIndex - a.zIndex);
+
+                return projectedPolys.map((poly, index) => {
+                    const onClick = (e) => {
+                        e.stopPropagation();
+                        setSelectedShapeId(poly.shapeId);
+                    };
+
+                    const style = { mixBlendMode: 'multiply' };
+
+                    if (poly.type === 'sphere') {
+                        return (
+                            <g key={`sphere-${index}`} onClick={onClick} style={style}>
+                                <circle 
+                                    cx={poly.projCenter.x} 
+                                    cy={poly.projCenter.y} 
+                                    r={poly.projRadius} 
+                                    fill={poly.color} 
+                                    stroke={poly.stroke} 
+                                    strokeWidth={poly.strokeWidth}
+                                />
+                                {poly.highlight && (
+                                    <circle 
+                                        cx={poly.projCenter.x} cy={poly.projCenter.y} r={poly.projRadius} 
+                                        fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="4 4" 
+                                    />
+                                )}
+                            </g>
+                        );
+                    } else {
+                        return (
+                            <path 
+                                key={`poly-${index}`}
+                                d={createPath(poly.projPoints)}
+                                fill={poly.color}
+                                stroke={poly.stroke}
+                                strokeWidth={poly.strokeWidth}
+                                strokeLinejoin="round"
+                                onClick={onClick}
+                                style={style}
+                                className="hover:opacity-90 transition-opacity"
+                            />
+                        );
+                    }
+                });
+            };
+
+            const selectedShape = shapes.find(s => s.id === selectedShapeId);
+
+            // 判斷當前游標樣式
+            let cursorClass = '';
+            if (interactionMode === 'moveItem') cursorClass = 'cursor-move-item';
+            else if (interactionMode === 'liftItem') cursorClass = 'cursor-ns-resize';
+            else if (interactionMode === 'rotate') cursorClass = 'cursor-rotate';
+            else cursorClass = 'cursor-grab';
+            
+            if (isDragging) {
+                if (interactionMode === 'pan') cursorClass = 'cursor-grabbing';
+            }
+
+            // 繪製座標軸 (Axes)
+            const renderAxes = () => {
+                const origin = project3D(0, 0, 0);
+                const xAxis = project3D(2000, 0, 0); // X 軸延伸
+                const zAxis = project3D(0, 0, 2000); // Z 軸延伸
+                
+                return (
+                    <g className="pointer-events-none opacity-30">
+                        <line x1={origin.x} y1={origin.y} x2={xAxis.x} y2={xAxis.y} stroke="red" strokeWidth="2" strokeDasharray="5,5" />
+                        <text x={xAxis.x} y={xAxis.y} fill="red" fontSize="12" fontWeight="bold">X</text>
+                        
+                        <line x1={origin.x} y1={origin.y} x2={zAxis.x} y2={zAxis.y} stroke="blue" strokeWidth="2" strokeDasharray="5,5" />
+                        <text x={zAxis.x} y={zAxis.y} fill="blue" fontSize="12" fontWeight="bold">Z</text>
+                        
+                        <circle cx={origin.x} cy={origin.y} r="3" fill="#333" />
+                    </g>
+                );
+            };
+
+            return (
+                <div className="flex flex-col md:flex-row gap-4 w-full h-[90vh]">
+                    
+                    {/* 左側：控制面板 */}
+                    <div className="w-full md:w-80 bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden border border-slate-200 order-2 md:order-1">
+                        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                            <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                <IconSettings /> 參數控制 (Parameters)
+                            </h2>
+                            <button onClick={resetView} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded" title="重置視角 (Reset View)">
+                                <IconRefresh />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+                            {selectedShape ? (
+                                <>
+                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-bold text-blue-600 uppercase">當前選擇 (Selected)</span>
+                                            <div className="flex gap-1">
+                                                <button onClick={duplicateShape} className="text-blue-500 hover:text-blue-700 p-1 bg-white rounded shadow-sm border border-slate-100" title="複製 (Copy)">
+                                                    <IconCopy />
+                                                </button>
+                                                <button onClick={(e) => removeShape(selectedShape.id, e)} className="text-red-400 hover:text-red-600 p-1 bg-white rounded shadow-sm border border-slate-100" title="刪除 (Delete)">
+                                                    <IconTrash />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="text-xl font-black text-slate-800 capitalize mb-1">{SHAPE_NAMES[selectedShape.type]}</div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {/* 位置座標 (Position Control) - 移除 Math.round，允許輸入小數 */}
+                                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                            <label className="flex items-center gap-2 text-sm font-bold text-amber-800 mb-2">
+                                                <IconMovePlanar /> 位置座標 (Position - cm)
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-2 mb-2">
+                                                <div>
+                                                    <span className="text-[10px] text-amber-600 block font-bold">X (左右/Horiz)</span>
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.5"
+                                                        value={selectedShape.x} 
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === '') return; // 允許清空
+                                                            updateSelectedShape('x', parseFloat(val));
+                                                        }} 
+                                                        className="w-full text-sm p-1 border border-amber-200 rounded focus:border-amber-500 outline-none text-center" 
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] text-amber-600 block font-bold">Y (離地/Elev)</span>
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.5"
+                                                        value={selectedShape.y} 
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === '') return;
+                                                            updateSelectedShape('y', Math.max(0, parseFloat(val)));
+                                                        }} 
+                                                        className="w-full text-sm p-1 border border-amber-200 rounded focus:border-amber-500 outline-none text-center" 
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] text-amber-600 block font-bold">Z (前後/Depth)</span>
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.5"
+                                                        value={selectedShape.z} 
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === '') return;
+                                                            updateSelectedShape('z', parseFloat(val));
+                                                        }} 
+                                                        className="w-full text-sm p-1 border border-amber-200 rounded focus:border-amber-500 outline-none text-center" 
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="pt-2 border-t border-amber-200/50">
+                                                <div className="flex justify-between text-xs text-amber-700 mb-1">
+                                                    <span>快速調整高度 (Quick Height)</span>
+                                                </div>
+                                                <input type="range" min="0" max="100" step="1" value={selectedShape.y} 
+                                                    onChange={(e) => updateSelectedShape('y', parseInt(e.target.value))} 
+                                                    className="w-full h-2 bg-white rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                                            </div>
+                                        </div>
+
+                                        {/* 顏色選擇器 (Color Palette) */}
+                                        <div>
+                                            <label className="flex items-center gap-2 text-sm font-bold text-slate-600 mb-2">
+                                                <IconPalette /> 外觀顏色 (Color)
+                                            </label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {PASTEL_COLORS.map((color) => (
+                                                    <button
+                                                        key={color.hue}
+                                                        onClick={() => updateSelectedShape('colorHue', color.hue)}
+                                                        className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${selectedShape.colorHue === color.hue ? 'border-slate-500 scale-110 shadow-md' : 'border-transparent'}`}
+                                                        style={{ backgroundColor: color.bg }}
+                                                        title={color.name}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-slate-200 my-2"></div>
+
+                                        {selectedShape.type !== 'sphere' && selectedShape.type !== 'cone' && selectedShape.type !== 'cylinder' && (
+                                            <div>
+                                                <label className="flex justify-between text-sm font-bold text-slate-600 mb-1">
+                                                    底面邊數 (Sides) <span className="text-blue-600">{selectedShape.sides}</span>
+                                                </label>
+                                                <input type="range" min="3" max="12" value={selectedShape.sides} 
+                                                    onChange={(e) => updateSelectedShape('sides', parseInt(e.target.value))} 
+                                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="flex justify-between text-sm font-bold text-slate-600 mb-1">
+                                                {(selectedShape.type === 'sphere' || selectedShape.type === 'cylinder' || selectedShape.type === 'cone') 
+                                                    ? '底面半徑 (Radius - cm)' 
+                                                    : '底面邊長 (Side Length - cm)'} 
+                                                <span className="text-blue-600">{selectedShape.baseSize} cm</span>
+                                            </label>
+                                            <input type="range" min="1" max="50" value={selectedShape.baseSize} 
+                                                onChange={(e) => updateSelectedShape('baseSize', parseInt(e.target.value))} 
+                                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                                        </div>
+
+                                        {selectedShape.type !== 'sphere' && (
+                                            <div>
+                                                <label className="flex justify-between text-sm font-bold text-slate-600 mb-1">
+                                                    高度 (Height - cm) <span className="text-blue-600">{selectedShape.height} cm</span>
+                                                </label>
+                                                <input type="range" min="1" max="100" value={selectedShape.height} 
+                                                    onChange={(e) => updateSelectedShape('height', parseInt(e.target.value))} 
+                                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-center text-slate-400 py-10">
+                                    <p>請點擊場景中的物體<br/>Click on an object to edit</p>
+                                </div>
+                            )}
+                            
+                            {/* 場景物件清單 */}
+                            <div className="pt-4 border-t border-slate-200">
+                                <h3 className="text-sm font-bold text-slate-600 mb-2 flex items-center gap-2"><IconList /> 物件清單 (Object List)</h3>
+                                <div className="space-y-1">
+                                    {shapes.map((shape, index) => {
+                                        // Find color object
+                                        const colorObj = PASTEL_COLORS.find(c => c.hue === shape.colorHue) || PASTEL_COLORS[6];
+                                        return (
+                                            <div 
+                                                key={shape.id}
+                                                onClick={() => { setSelectedShapeId(shape.id); setInteractionMode('moveItem'); }}
+                                                className={`flex items-center justify-between p-2 rounded cursor-pointer text-xs transition-colors ${selectedShapeId === shape.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50 border border-transparent'}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full border border-slate-300" style={{ backgroundColor: colorObj.bg }}></div>
+                                                    <span className="font-bold text-slate-700">{SHAPE_NAMES[shape.type]} {index + 1}</span>
+                                                    <span className="text-slate-400 scale-90">({Math.round(shape.x)}, {Math.round(shape.y)}, {Math.round(shape.z)})</span>
+                                                </div>
+                                                <button 
+                                                    onClick={(e) => removeShape(shape.id, e)}
+                                                    className="text-slate-400 hover:text-red-500 p-1"
+                                                    title="刪除 (Delete)"
+                                                >
+                                                    <IconTrash />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 border-t border-slate-200 grid grid-cols-3 gap-2">
+                             <button onClick={() => addShape('prism')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
+                                <IconCube /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">角柱<br/>(Prism)</span>
+                             </button>
+                             <button onClick={() => addShape('pyramid')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
+                                <IconPyramid /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">角錐<br/>(Pyramid)</span>
+                             </button>
+                             <button onClick={() => addShape('cylinder')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
+                                <IconCylinder /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">圓柱<br/>(Cylinder)</span>
+                             </button>
+                             <button onClick={() => addShape('cone')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
+                                <IconCone /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">圓錐<br/>(Cone)</span>
+                             </button>
+                             <button onClick={() => addShape('sphere')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
+                                <IconSphere /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">球體<br/>(Sphere)</span>
+                             </button>
+                        </div>
+                    </div>
+
+                    {/* 右側：3D 畫布 */}
+                    <div className="flex-1 bg-white rounded-2xl shadow-xl relative overflow-hidden flex flex-col order-1 md:order-2">
+                        
+                        <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
+                            <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 text-xs font-bold text-slate-600 pointer-events-auto">
+                                物件 (Objects): {shapes.length}
+                            </div>
+
+                            <div className="flex gap-2 pointer-events-auto bg-white/90 backdrop-blur p-1 rounded-lg shadow-sm border border-slate-200">
+                                <button 
+                                    onClick={() => setInteractionMode('moveItem')}
+                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'moveItem' ? 'bg-amber-100 text-amber-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
+                                    title="水平移動 (Move XZ)"
+                                >
+                                    <IconMovePlanar /> 移動 (Move)
+                                </button>
+                                <button 
+                                    onClick={() => setInteractionMode('liftItem')}
+                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'liftItem' ? 'bg-purple-100 text-purple-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
+                                    title="垂直升降 (Lift Y)"
+                                >
+                                    <IconMoveVertical /> 垂直 (Lift)
+                                </button>
+                                <div className="w-px bg-slate-200 mx-1"></div>
+                                <button 
+                                    onClick={() => setInteractionMode('rotate')}
+                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'rotate' ? 'bg-blue-100 text-blue-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
+                                    title="旋轉視角 (Rotate View)"
+                                >
+                                    <IconRotate3D /> 旋轉 (Rotate)
+                                </button>
+                                <button 
+                                    onClick={() => setInteractionMode('pan')}
+                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'pan' ? 'bg-blue-100 text-blue-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
+                                    title="平移視角 (Pan View)"
+                                >
+                                    <IconPan /> 平移 (Pan)
+                                </button>
+                            </div>
+                        </div>
+
+                        <svg 
+                            ref={svgRef}
+                            viewBox="0 0 800 600" 
+                            className={`w-full h-full bg-slate-50 touch-none ${cursorClass}`}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                            onWheel={handleWheel}
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleMouseUp}
+                        >
+                            <defs>
+                                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" strokeWidth="1"/>
+                                </pattern>
+                            </defs>
+                            
+                            <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
+                                {/* 地板網格 */}
+                                <rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#grid)" />
+                                {renderAxes()}
+                                
+                                {/* 渲染場景 */}
+                                {renderScene()}
+                            </g>
+                        </svg>
+
+                        <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex justify-center">
+                            <div className="bg-black/70 text-white px-4 py-2 rounded-full text-xs backdrop-blur pointer-events-auto shadow-lg text-center">
+                                {interactionMode === 'moveItem' && '🖱️ 拖曳水平移動 (Drag to Move XZ) • 堆疊 (Stack)'}
+                                {interactionMode === 'liftItem' && '🖱️ 拖曳垂直升降 (Drag to Lift Y)'}
+                                {interactionMode === 'rotate' && '🖱️ 拖曳旋轉 (Drag to Rotate) • 滾輪縮放 (Scroll to Zoom)'}
+                                {interactionMode === 'pan' && '🖱️ 拖曳平移 (Drag to Pan) • 滾輪縮放 (Scroll to Zoom)'}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GeometryLab />);
+    </script>
+</body>
+</html>
