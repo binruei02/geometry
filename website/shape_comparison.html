@@ -122,6 +122,66 @@
             ]);
             const [selectedShapeId, setSelectedShapeId] = useState(1);
             
+            // --- 國小五下：立體圖形互動檢核任務狀態 ---
+            const [quizOpen, setQuizOpen] = useState(true);
+            const [quizStep, setQuizStep] = useState(0); 
+            // 0: 柱體底面點選 (點選 2 個底面)
+            // 1: 柱體側面形狀檢核 (長方形)
+            // 2: 圓柱側面特性 (曲面，展開為長方形)
+            // 3: 錐體底面點選 (只有 1 個底面)
+            // 4: 錐體側面形狀 (角錐側面三角形，圓錐展開扇形)
+            // 5: 完成挑戰
+            const [clickedBases, setClickedBases] = useState([]); // ['top', 'bottom']
+            const [quizFeedback, setQuizFeedback] = useState(null);
+            const [quizCompleted, setQuizCompleted] = useState(false);
+
+            // 面的互動點擊檢核
+            const handleFaceClick = (poly, e) => {
+                e && e.stopPropagation();
+                setSelectedShapeId(poly.shapeId);
+
+                // 任務 0：柱體點選 2 個底面
+                if (quizStep === 0) {
+                    if (poly.partType === 'top' || poly.partType === 'bottom') {
+                        if (!clickedBases.includes(poly.partType)) {
+                            const newBases = [...clickedBases, poly.partType];
+                            setClickedBases(newBases);
+                            if (newBases.length === 2) {
+                                setQuizFeedback({
+                                    ok: true,
+                                    msg: '太棒了！你找到了柱體的 2 個底面！這兩個底面完全全等而且互相平行。'
+                                });
+                            } else {
+                                setQuizFeedback({
+                                    ok: true,
+                                    msg: `找到了 1 個底面（${poly.partType === 'top' ? '上底面' : '下底面'}）！旋轉視角再點選另一個底面！`
+                                });
+                            }
+                        }
+                    } else if (poly.partType === 'side') {
+                        setQuizFeedback({
+                            ok: false,
+                            msg: '這是側面喔！請找找看上下兩個互相平行的「底面」在哪裡！'
+                        });
+                    }
+                } 
+                // 任務 3：錐體點選 1 個底面
+                else if (quizStep === 3) {
+                    if (poly.partType === 'bottom') {
+                        setClickedBases(['bottom']);
+                        setQuizFeedback({
+                            ok: true,
+                            msg: '答對了！這就是錐體的底面。請記住：錐體只有 1 個底面喔！'
+                        });
+                    } else if (poly.partType === 'side') {
+                        setQuizFeedback({
+                            ok: false,
+                            msg: '這是角錐傾斜的側面（三角形），請點選最下方的「底面」！'
+                        });
+                    }
+                }
+            };
+            
             // 視圖與互動模式 
             const [interactionMode, setInteractionMode] = useState('moveItem'); 
             const [view, setView] = useState({ x: 0, y: 0, scale: 1 }); 
@@ -387,6 +447,8 @@
                         const faceLightness = 75 + (i % 2) * 5; 
                         polygons.push({
                             shapeId: id,
+                            partType: 'side',
+                            sideIndex: i,
                             points: [topPts[i], topPts[next], bottomPts[next], bottomPts[i]],
                             color: baseFillColor(faceLightness),
                             stroke: isSmooth ? 'none' : strokeColor,
@@ -394,8 +456,8 @@
                         });
                     }
                     // 頂底面
-                    polygons.push({ shapeId: id, points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
-                    polygons.push({ shapeId: id, points: topPts, color: baseFillColor(80), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                    polygons.push({ shapeId: id, partType: 'bottom', points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                    polygons.push({ shapeId: id, partType: 'top', points: topPts, color: baseFillColor(80), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
                 }
                 
                 // --- 3. 錐體 (Pyramid / Cone) ---
@@ -411,7 +473,7 @@
                     }
 
                     // 底面
-                    polygons.push({ shapeId: id, points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                    polygons.push({ shapeId: id, partType: 'bottom', points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
 
                     // 側面
                     for(let i=0; i<renderSides; i++) {
@@ -419,6 +481,8 @@
                         const faceLightness = 75 + (i % 2) * 5;
                         polygons.push({
                             shapeId: id,
+                            partType: 'side',
+                            sideIndex: i,
                             points: [bottomPts[i], bottomPts[next], apexPoint],
                             color: baseFillColor(faceLightness),
                             stroke: isSmooth ? 'none' : strokeColor,
@@ -467,8 +531,7 @@
 
                 return projectedPolys.map((poly, index) => {
                     const onClick = (e) => {
-                        e.stopPropagation();
-                        setSelectedShapeId(poly.shapeId);
+                        handleFaceClick(poly, e);
                     };
 
                     const style = { mixBlendMode: 'multiply' };
@@ -493,17 +556,32 @@
                             </g>
                         );
                     } else {
+                        // 檢核高亮邏輯
+                        let fillColor = poly.color;
+                        let strokeColor = poly.stroke;
+                        let strokeWidth = poly.strokeWidth;
+
+                        if (poly.partType && clickedBases.includes(poly.partType)) {
+                            fillColor = 'rgba(245, 158, 11, 0.85)'; // 金黃底面高亮
+                            strokeColor = '#b45309';
+                            strokeWidth = 3;
+                        } else if (quizStep === 1 && poly.partType === 'side') {
+                            fillColor = 'rgba(14, 165, 233, 0.75)'; // 側面形狀展示高亮
+                            strokeColor = '#0369a1';
+                            strokeWidth = 2.5;
+                        }
+
                         return (
                             <path 
                                 key={`poly-${index}`}
                                 d={createPath(poly.projPoints)}
-                                fill={poly.color}
-                                stroke={poly.stroke}
-                                strokeWidth={poly.strokeWidth}
+                                fill={fillColor}
+                                stroke={strokeColor}
+                                strokeWidth={strokeWidth}
                                 strokeLinejoin="round"
                                 onClick={onClick}
                                 style={style}
-                                className="hover:opacity-90 transition-opacity"
+                                className="hover:opacity-90 transition-opacity cursor-pointer"
                             />
                         );
                     }
@@ -815,6 +893,263 @@
                                 {renderScene()}
                             </g>
                         </svg>
+
+                        {/* --- 國小五下數學：立體圖形互動小檢核 HUD --- */}
+                        {quizOpen ? (
+                            <div className="absolute top-16 right-4 z-20 w-84 md:w-96 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-200 p-4 animate-in fade-in">
+                                <div className="flex justify-between items-center pb-2 mb-3 border-b border-indigo-100">
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">小檢核任務</span>
+                                        <span className="text-xs text-indigo-700 font-bold">題 {quizStep + 1} / 5</span>
+                                    </div>
+                                    <button onClick={() => setQuizOpen(false)} className="text-slate-400 hover:text-slate-600 text-xs px-1.5 py-0.5 rounded border border-slate-200">
+                                        收合 ✕
+                                    </button>
+                                </div>
+
+                                {/* 題 1：柱體底面點選 */}
+                                {quizStep === 0 && (
+                                    <div className="space-y-3">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 1：柱體的「底面」有幾個？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            請旋轉 3D 柱體視角，直接在形體上點選它的<b>「兩個底面」</b>！
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes('top') ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                {clickedBases.includes('top') ? '✓ 上底面 (已選取)' : '○ 上底面 (待點選)'}
+                                            </span>
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes('bottom') ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                {clickedBases.includes('bottom') ? '✓ 下底面 (已選取)' : '○ 下底面 (待點選)'}
+                                            </span>
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {clickedBases.length >= 2 && (
+                                            <button 
+                                                onClick={() => {
+                                                    setQuizStep(1);
+                                                    setClickedBases([]);
+                                                    setQuizFeedback(null);
+                                                }}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                            >
+                                                答對了！前往下一題 →
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 2：柱體側面形狀 */}
+                                {quizStep === 1 && (
+                                    <div className="space-y-3">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 2：柱體的「側面」是什麼形狀？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            觀察畫面上高亮天藍色的側面，直角柱的每一個側面都是什麼形狀？
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {['長方形 (Rectangle)', '三角形', '圓形', '梯形'].map((opt, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (i === 0) {
+                                                            setQuizFeedback({ ok: true, msg: '完全正確！直角柱的側面展開都是長方形。' });
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '不對喔，角錐的側面才是三角形。柱體的側面是長方形！' });
+                                                        }
+                                                    }}
+                                                    className="p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 text-left"
+                                                >
+                                                    {opt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {quizFeedback && quizFeedback.ok && (
+                                            <button 
+                                                onClick={() => {
+                                                    setQuizStep(2);
+                                                    setQuizFeedback(null);
+                                                    // 切換或確保為圓柱
+                                                    addShape('cylinder');
+                                                }}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                            >
+                                                前往第 3 題 (圓柱側面) →
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 3：圓柱側面特性 */}
+                                {quizStep === 2 && (
+                                    <div className="space-y-3">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 3：圓柱的側面有什麼特性？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            圓柱摸起來圓圓滑滑的。它的側面原本是<b>曲面</b>，如果剪開攤平會是什麼形狀？
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {[
+                                                { text: '側面是曲面，展開後是長方形 (長 = 底面圓周長)', right: true },
+                                                { text: '側面是平面，展開後是圓形', right: false },
+                                                { text: '側面是扇形', right: false }
+                                            ].map((item, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (item.right) {
+                                                            setQuizFeedback({ ok: true, msg: '太棒了！圓柱側面立體時是曲面，但它展開後也是「長方形」！' });
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '再想想看，把洋芋片罐子的側面包裝紙撕下來攤平，會是長方形喔！' });
+                                                        }
+                                                    }}
+                                                    className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 text-left"
+                                                >
+                                                    {item.text}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {quizFeedback && quizFeedback.ok && (
+                                            <button 
+                                                onClick={() => {
+                                                    setQuizStep(3);
+                                                    setClickedBases([]);
+                                                    setQuizFeedback(null);
+                                                    addShape('pyramid');
+                                                }}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                            >
+                                                前往第 4 題 (錐體底面) →
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 4：錐體底面與頂點 */}
+                                {quizStep === 3 && (
+                                    <div className="space-y-3">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 4：錐體的「底面」有幾個？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            畫面上已切換為角錐。請旋轉視角，在 3D 角錐上點選它的<b>「底面」</b>！
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes('bottom') ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                {clickedBases.includes('bottom') ? '✓ 底面 (只有 1 個)' : '○ 底面 (待點選)'}
+                                            </span>
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {clickedBases.includes('bottom') && (
+                                            <button 
+                                                onClick={() => {
+                                                    setQuizStep(4);
+                                                    setQuizFeedback(null);
+                                                }}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                            >
+                                                前往第 5 題 (錐體側面形狀) →
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 5：角錐側面與圓錐側面 */}
+                                {quizStep === 4 && (
+                                    <div className="space-y-3">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 5：角錐與圓錐的側面是什麼形狀？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            仔細觀察角錐的側面，以及想一想圓錐側面展開是什麼形狀？
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {[
+                                                { text: '角錐側面是三角形；圓錐側面是曲面，展開後是扇形', right: true },
+                                                { text: '角錐側面是長方形；圓錐側面展開是長方形', right: false },
+                                                { text: '角錐側面是圓形；圓錐側面展開是正方形', right: false }
+                                            ].map((item, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (item.right) {
+                                                            setQuizFeedback({ ok: true, msg: '太厲害了！角錐側面都是三角形聚在頂點；圓錐側面展開則是扇形！' });
+                                                            setQuizCompleted(true);
+                                                            // 通知父視窗並存檔
+                                                            try {
+                                                                if (window.parent) {
+                                                                    window.parent.postMessage({ type: 'STEP_COMPLETED', stepId: 's1' }, '*');
+                                                                }
+                                                                const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                                                                if (!p.done.includes('s1')) {
+                                                                    p.done.push('s1');
+                                                                    localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
+                                                                }
+                                                            } catch(e) {}
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '再想想看，角錐尖尖的，側面是三角形喔！' });
+                                                        }
+                                                    }}
+                                                    className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 text-left"
+                                                >
+                                                    {item.text}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {quizCompleted && (
+                                            <div className="pt-2">
+                                                <div className="bg-amber-100 text-amber-900 p-2.5 rounded-xl text-xs font-bold text-center mb-2">
+                                                    🎉 恭喜完成第 1 關所有操作檢核！
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (window.parent && window.parent.document.getElementById('viewerBack')) {
+                                                            window.parent.document.getElementById('viewerBack').click();
+                                                        }
+                                                    }}
+                                                    className="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                                >
+                                                    返回學習地圖 (已解鎖第 2 關) ✓
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={() => setQuizOpen(true)}
+                                className="absolute top-16 right-4 z-20 bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1.5 hover:bg-indigo-700 active:scale-95"
+                            >
+                                <span>✏️ 打開小檢核任務</span>
+                            </button>
+                        )}
 
                         <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex justify-center">
                             <div className="bg-black/70 text-white px-4 py-2 rounded-full text-xs backdrop-blur pointer-events-auto shadow-lg text-center">

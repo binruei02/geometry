@@ -181,6 +181,81 @@
         .lil-gui { 
             display: none !important; 
         }
+
+        /* 國小五下：球體小檢核 HUD 樣式 */
+        #sphere-quiz-hud {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid #38bdf8;
+            border-radius: 18px;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            z-index: 100;
+            font-family: inherit;
+        }
+        #sphere-quiz-hud h3 { margin: 0 0 6px; font-size: 1rem; color: #0369a1; }
+        #sphere-quiz-hud p { margin: 0 0 10px; font-size: 0.85rem; color: #475569; background: none; padding: 0; line-height: 1.5; }
+        .hud-btn {
+            display: block;
+            width: 100%;
+            margin-top: 6px;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #1e293b;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
+        }
+        .hud-btn:hover { background: #f0f9ff; border-color: #38bdf8; }
+        .hud-feedback {
+            margin-top: 10px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            display: none;
+        }
+        .hud-feedback.show { display: block; }
+        .hud-feedback.ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .hud-feedback.err { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+        .hud-next {
+            margin-top: 10px;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(90deg, #0284c7, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(37,99,235,0.25);
+        }
+        #hud-toggle-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            z-index: 99;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -200,6 +275,17 @@
         <label id="slider-label" for="clip-slider">移動切割面 (Move Cut Position)</label>
         <input type="range" id="clip-slider" min="-5" max="5" step="0.01" value="0">
     </div>
+
+    <!-- 國小五下：球體小檢核 HUD -->
+    <div id="sphere-quiz-hud">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="background:#0284c7; color:white; font-size:11px; padding:2px 8px; border-radius:99px; font-weight:bold;">球體小檢核</span>
+            <span id="hud-step-indicator" style="font-size:12px; color:#0369a1; font-weight:bold;">題 1 / 3</span>
+            <button id="hud-close-btn" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:12px;">✕ 收合</button>
+        </div>
+        <div id="hud-content"></div>
+    </div>
+    <button id="hud-toggle-btn">✏️ 打開小檢核任務</button>
 
     <!-- Import Maps for Three.js -->
     <script type="importmap">
@@ -668,6 +754,99 @@
             if (viewHelper) viewHelper.render(renderer);
             labelRenderer.render(scene, camera);
         }
+
+        // --- 國小五下：球體小檢核邏輯 ---
+        let currentStep = 0;
+        const hud = document.getElementById('sphere-quiz-hud');
+        const hudContent = document.getElementById('hud-content');
+        const hudStepIndicator = document.getElementById('hud-step-indicator');
+        const hudToggle = document.getElementById('hud-toggle-btn');
+        const hudClose = document.getElementById('hud-close-btn');
+
+        if (hudClose && hudToggle) {
+            hudClose.onclick = () => { hud.style.display = 'none'; hudToggle.style.display = 'block'; };
+            hudToggle.onclick = () => { hud.style.display = 'block'; hudToggle.style.display = 'none'; };
+        }
+
+        function renderSphereQuiz() {
+            if (!hudContent) return;
+            hudStepIndicator.textContent = `題 ${currentStep + 1} / 3`;
+            if (currentStep === 0) {
+                hudContent.innerHTML = `
+                    <h3>🎯 任務 1：球心、半徑與直徑</h3>
+                    <p>拖曳紅色球體半徑線：從球心到球面上任一點的距離都相等，這段長度叫做？直徑與半徑是什麼關係？</p>
+                    <button class="hud-btn" data-ans="1">半徑；直徑是半徑的 2 倍 (直徑 = 2 × 半徑)</button>
+                    <button class="hud-btn" data-ans="0">直徑；直徑是半徑的 1/2</button>
+                    <button class="hud-btn" data-ans="0">圓周；直徑等於圓周長</button>
+                    <div id="hud-fb" class="hud-feedback"></div>
+                `;
+            } else if (currentStep === 1) {
+                hudContent.innerHTML = `
+                    <h3>🎯 任務 2：球體的平面切面是什麼形狀？</h3>
+                    <p>滑動下方「移動切割面」滑桿，從各個位置切切看球體：切口的剖面形狀一定是什麼？</p>
+                    <button class="hud-btn" data-ans="1">永遠都是圓形 (Circle)</button>
+                    <button class="hud-btn" data-ans="0">有時候是橢圓形，有時候是圓形</button>
+                    <button class="hud-btn" data-ans="0">正方形</button>
+                    <div id="hud-fb" class="hud-feedback"></div>
+                `;
+            } else if (currentStep === 2) {
+                hudContent.innerHTML = `
+                    <h3>🎯 任務 3：什麼時候切面的面積最大？</h3>
+                    <p>把切割面滑桿拉到中間 (切割面高度 = 0)：什麼時候切面的圓形最大？這個大圓的直徑等於球的什麼？</p>
+                    <button class="hud-btn" data-ans="1">切面通過球心時最大，它的直徑等於球的直徑</button>
+                    <button class="hud-btn" data-ans="0">切在最頂端時最大</button>
+                    <button class="hud-btn" data-ans="0">每一個切面的大小都完全一樣</button>
+                    <div id="hud-fb" class="hud-feedback"></div>
+                `;
+            }
+
+            hudContent.querySelectorAll('.hud-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const fb = document.getElementById('hud-fb');
+                    if (btn.dataset.ans === '1') {
+                        fb.className = 'hud-feedback show ok';
+                        fb.innerHTML = '✅ 答對了！' + (currentStep === 0 ? '球心到球面上任一點距離皆等於半徑！' : currentStep === 1 ? '無論怎麼切，球的截面永遠是圓形！' : '通過球心的切面最大，其半徑就是球半徑！');
+                        
+                        if (currentStep < 2) {
+                            if (!hudContent.querySelector('.hud-next')) {
+                                const nextBtn = document.createElement('button');
+                                nextBtn.className = 'hud-next';
+                                nextBtn.textContent = '前往下一題 →';
+                                nextBtn.onclick = () => { currentStep++; renderSphereQuiz(); };
+                                hudContent.appendChild(nextBtn);
+                            }
+                        } else {
+                            if (!hudContent.querySelector('.hud-next')) {
+                                const finishBtn = document.createElement('button');
+                                finishBtn.className = 'hud-next';
+                                finishBtn.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+                                finishBtn.textContent = '🎉 檢核完成！返回學習地圖';
+                                finishBtn.onclick = () => {
+                                    try {
+                                        if (window.parent) {
+                                            window.parent.postMessage({ type: 'STEP_COMPLETED', stepId: 's3' }, '*');
+                                            if (window.parent.document.getElementById('viewerBack')) {
+                                                window.parent.document.getElementById('viewerBack').click();
+                                            }
+                                        }
+                                        const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                                        if (!p.done.includes('s3')) {
+                                            p.done.push('s3');
+                                            localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
+                                        }
+                                    } catch(e) {}
+                                };
+                                hudContent.appendChild(finishBtn);
+                            }
+                        }
+                    } else {
+                        fb.className = 'hud-feedback show err';
+                        fb.innerHTML = '❌ 再想想看，可以拖曳 3D 球體或滑桿觀察看看喔！';
+                    }
+                };
+            });
+        }
+        renderSphereQuiz();
     </script>
 </body>
 </html>

@@ -392,6 +392,7 @@
     $('panelBg').addEventListener('click', (e) => e.target === $('panelBg') && closePanel());
 
     function openStep(i) {
+      syncState();
       const s = STEPS[i];
       const opts = s.check.opts.map((o, k) => `<button class="opt" data-k="${k}">${o}</button>`).join('');
       openPanel(`
@@ -401,12 +402,15 @@
         <div class="formula">${s.formula}</div>
         <h3 style="margin:20px 0 0">動手操作任務</h3>
         <ul class="tasks">${s.tasks.map((t) => `<li>${t}</li>`).join('')}</ul>
+        <div style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);border-radius:14px;padding:12px 16px;margin:14px 0;line-height:1.6;">
+          💡 <b>小檢核已融入 3D 教具：</b> 請點擊下方「🧊 打開互動教具」，在 3D 畫布上邊旋轉邊點選底面、辨識側面形狀！教具內完成檢核會自動為本關打勾！
+        </div>
         <div class="row">
-          <button class="btn" id="openTool">🧊 打開互動教具</button>
+          <button class="btn" id="openTool">🧊 打開互動教具（邊操作邊檢核）</button>
           <button class="btn ghost" id="closeP">回到地圖</button>
         </div>
         <div class="q" id="checkBox">
-          <div class="qt">✏️ 小檢核：${s.check.q}</div>
+          <div class="qt">✏️ 關卡速測：${s.check.q}</div>
           <div class="opts">${opts}</div>
           <div class="explain" id="checkExplain"></div>
         </div>
@@ -448,7 +452,30 @@
       $('viewer').classList.remove('show');
       $('viewerFrame').src = 'about:blank';
       document.body.style.overflow = '';
+      syncState();
     };
+
+    function syncState() {
+      try {
+        const loaded = JSON.parse(localStorage.getItem(KEY) || '{"done":[],"best":null}');
+        if (JSON.stringify(loaded) !== JSON.stringify(state)) {
+          state = loaded;
+          renderMap();
+        }
+      } catch (e) {}
+    }
+    window.addEventListener('storage', syncState);
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'STEP_COMPLETED') {
+        const sid = e.data.stepId;
+        if (sid && !isDone(sid)) {
+          state.done.push(sid);
+          save();
+          renderMap();
+          confetti();
+        }
+      }
+    });
 
     // ===== 總測驗 =====
     let quiz = null;
