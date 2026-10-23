@@ -157,13 +157,24 @@
     .viewer { position: fixed; inset: 0; z-index: 80; background: #0f172a; display: none; flex-direction: column; }
     .viewer.show { display: flex; }
     .viewer-bar {
-      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-      padding-top: calc(10px + env(safe-area-inset-top));
+      display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px;
+      padding-top: calc(8px + env(safe-area-inset-top));
       background: linear-gradient(90deg, #312e81, #1e1b4b); border-bottom: 1px solid var(--line);
     }
-    .viewer-bar .title { flex: 1; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .viewer-bar .btn { padding: 10px 18px; font-size: 0.95rem; min-height: 44px; }
+    .viewer-bar .title { font-weight: 700; font-size: 0.95rem; color: #f8fafc; letter-spacing: 0.5px; }
     .viewer iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+    .viewer-float-back {
+      position: fixed; right: 18px; bottom: 20px; z-index: 95;
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(30, 27, 75, 0.92); color: #f8fafc;
+      border: 1.5px solid rgba(250, 204, 21, 0.4);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding: 9px 18px; border-radius: 999px; font-weight: 700; font-size: 0.88rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45); cursor: pointer;
+      transition: transform 0.15s, background 0.15s, border-color 0.15s;
+    }
+    .viewer-float-back:hover { background: #312e81; border-color: var(--c3); }
+    .viewer-float-back:active { transform: scale(0.92); }
 
     /* 測驗 */
     .quiz-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -233,11 +244,13 @@
   <!-- 教具檢視器 -->
   <div class="viewer" id="viewer">
     <div class="viewer-bar">
-      <button class="btn ghost" id="viewerBack">← 回到關卡</button>
-      <div class="title" id="viewerTitle"></div>
-      <a class="btn ghost" id="viewerNewTab" target="_blank" rel="noopener">新分頁</a>
+      <div class="title" id="viewerTitle">幾何形體互動探索</div>
     </div>
     <iframe id="viewerFrame" title="互動教具" allow="fullscreen; accelerometer; gyroscope"></iframe>
+    <!-- 縮小後浮動在右下方的回到關卡按鈕 (iPad 手指操作極其直覺) -->
+    <button class="viewer-float-back" id="viewerBack" title="回到關卡地圖">
+      <span>←</span> 回到關卡
+    </button>
   </div>
 
   <script>
@@ -395,7 +408,7 @@
     function openStep(i) {
       syncState();
       const s = STEPS[i];
-      const opts = s.check.opts.map((o, k) => `<button class="opt" data-k="${k}">${o}</button>`).join('');
+      const done = isDone(s.id);
       openPanel(`
         <h2>第 ${i + 1} 關｜${s.title}</h2>
         <p class="goal">${s.goal}</p>
@@ -404,47 +417,23 @@
         <h3 style="margin:20px 0 0">動手操作任務</h3>
         <ul class="tasks">${s.tasks.map((t) => `<li>${t}</li>`).join('')}</ul>
         <div style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);border-radius:14px;padding:12px 16px;margin:14px 0;line-height:1.6;">
-          💡 <b>小檢核已融入 3D 教具：</b> 請點擊下方「🧊 打開互動教具」，在 3D 畫布上邊旋轉邊點選底面、辨識側面形狀！教具內完成檢核會自動為本關打勾！
+          💡 <b>小檢核已全面融入 3D 教具：</b> 檢核題目與選項直接整合在操作介面頂部，邊操作邊答題！完成任務後將直接跳至下一個關卡！
         </div>
         <div class="row">
-          <button class="btn" id="openTool">🧊 打開互動教具（邊操作邊檢核）</button>
+          <button class="btn" id="openTool">🚀 ${done ? '再次進入關卡教具' : '進入關卡（開始動手檢核）'}</button>
           <button class="btn ghost" id="closeP">回到地圖</button>
-        </div>
-        <div class="q" id="checkBox">
-          <div class="qt">✏️ 關卡速測：${s.check.q}</div>
-          <div class="opts">${opts}</div>
-          <div class="explain" id="checkExplain"></div>
         </div>
       `);
       $('closeP').onclick = closePanel;
-      $('openTool').onclick = () => openViewer(s.page, s.pageTitle);
-      document.querySelectorAll('#checkBox .opt').forEach((b) => {
-        b.onclick = () => {
-          const k = +b.dataset.k;
-          if (k === s.check.a) {
-            document.querySelectorAll('#checkBox .opt').forEach((x) => (x.disabled = true));
-            b.classList.add('right');
-            $('checkExplain').innerHTML = `✅ 答對了！${s.check.why}`;
-            $('checkExplain').classList.add('show');
-            if (!isDone(s.id)) { state.done.push(s.id); save(); confetti(); }
-            const nextLabel = i < STEPS.length - 1 ? '前往下一關 →' : '前往總測驗 →';
-            $('checkBox').insertAdjacentHTML('beforeend', `<div class="row"><button class="btn blue" id="goNext">${nextLabel}</button></div>`);
-            $('goNext').onclick = () => { renderMap(); i < STEPS.length - 1 ? openStep(i + 1) : startQuiz(); };
-            renderMap();
-          } else {
-            b.classList.add('wrong');
-            b.disabled = true;
-            $('checkExplain').innerHTML = '❌ 再想想看，可以回到教具操作一次喔！';
-            $('checkExplain').classList.add('show');
-          }
-        };
-      });
+      $('openTool').onclick = () => {
+        closePanel();
+        openViewer(s.page, s.pageTitle);
+      };
     }
 
     // ===== 教具檢視器 =====
     function openViewer(url, title) {
       $('viewerTitle').textContent = title;
-      $('viewerNewTab').href = url;
       $('viewerFrame').src = url;
       $('viewer').classList.add('show');
       document.body.style.overflow = 'hidden';
@@ -467,13 +456,30 @@
     }
     window.addEventListener('storage', syncState);
     window.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'STEP_COMPLETED') {
-        const sid = e.data.stepId;
+      if (!e.data) return;
+      if (e.data.type === 'STEP_COMPLETED') {
+        const sid = e.data.stepId || e.data.currentStepId;
         if (sid && !isDone(sid)) {
           state.done.push(sid);
           save();
           renderMap();
           confetti();
+        }
+      } else if (e.data.type === 'GO_NEXT_STEP') {
+        const sid = e.data.stepId || e.data.currentStepId;
+        if (sid && !isDone(sid)) {
+          state.done.push(sid);
+          save();
+          renderMap();
+        }
+        // 切換到下一個關卡
+        const currentIdx = STEPS.findIndex(s => s.id === sid);
+        if (currentIdx !== -1 && currentIdx < STEPS.length - 1) {
+          const nextStep = STEPS[currentIdx + 1];
+          openViewer(nextStep.page, nextStep.pageTitle);
+        } else if (currentIdx === STEPS.length - 1) {
+          $('viewerBack').click();
+          startQuiz();
         }
       }
     });

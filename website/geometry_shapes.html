@@ -587,429 +587,582 @@
             };
 
             return (
-                <div className="w-full max-w-6xl mx-auto bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-xl font-sans overflow-hidden border border-slate-200">
-                    <div className="p-6">
-                        <h1 className="text-2xl md:text-3xl font-bold text-center mb-6 text-slate-800 flex items-center justify-center gap-3">
-                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">立體圖形展開與組合 / 3D Folding Explorer</span>
-                        </h1>
-                        
-                        <div className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-100">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <div className="space-y-5">
-                                    <div>
-                                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3"><IconInfo /> 選擇形狀 / Select Shape</label>
-                                        <div className="grid grid-cols-3 sm:grid-cols-5 bg-slate-100 p-1 rounded-lg gap-1">
-                                            {['prism', 'pyramid', 'cylinder', 'cone', 'cube'].map(type => (
-                                                <button key={type} onClick={() => { setShapeType(type); resetPositions(); resetView(); }} 
-                                                    className={`py-2 rounded-md text-xs sm:text-sm font-bold transition-all ${shapeType === type ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-                                                    {{'prism':'角柱 Prism', 'pyramid':'角錐 Pyramid', 'cylinder':'圓柱 Cylinder', 'cone':'圓錐 Cone', 'cube':'正方體 Cube'}[type].split(' ').map((t,i) => <span key={i}>{t}<br/></span>)}
+                <div className="w-screen h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
+                    {/* --- 頂部精簡導航與下拉選單工具列 (iPad 觸控友善) --- */}
+                    <header className="h-14 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 md:px-4 flex items-center justify-between z-30 shrink-0 gap-2">
+                        {/* 左側：形狀與展開圖樣式下拉選單 */}
+                        <div className="flex items-center gap-2 overflow-x-auto py-1">
+                            {/* 形狀選擇下拉選單 */}
+                            <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1">
+                                <span className="text-xs text-slate-400 font-bold whitespace-nowrap hidden sm:inline">形狀:</span>
+                                <select 
+                                    value={shapeType} 
+                                    onChange={(e) => { 
+                                        setShapeType(e.target.value); 
+                                        resetPositions(); 
+                                        resetView(); 
+                                    }}
+                                    className="bg-transparent text-white font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                    id="shapeSelect"
+                                >
+                                    <option value="prism" className="bg-slate-800 text-white">🔷 角柱 (Prism)</option>
+                                    <option value="cylinder" className="bg-slate-800 text-white">🥫 圓柱 (Cylinder)</option>
+                                    <option value="pyramid" className="bg-slate-800 text-white">🔺 角錐 (Pyramid)</option>
+                                    <option value="cone" className="bg-slate-800 text-white">🍦 圓錐 (Cone)</option>
+                                    <option value="cube" className="bg-slate-800 text-white">🧊 正方體 11 種展開圖 (Cube)</option>
+                                </select>
+                            </div>
+
+                            {/* 展開圖樣式下拉選單 (根據形狀動態切換) */}
+                            {shapeType === 'cube' ? (
+                                <div className="flex items-center gap-1.5 bg-indigo-950/80 border border-indigo-700/80 rounded-lg px-2 py-1">
+                                    <span className="text-xs text-indigo-300 font-bold whitespace-nowrap">展開圖:</span>
+                                    <select 
+                                        value={cubeNetType} 
+                                        onChange={(e) => { 
+                                            setCubeNetType(parseInt(e.target.value)); 
+                                            resetAnimation(); 
+                                            resetView(); 
+                                        }}
+                                        className="bg-transparent text-indigo-200 font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                        id="cubeNetSelect"
+                                    >
+                                        <optgroup label="1-4-1 型 (6種)" className="bg-slate-800 text-white">
+                                            <option value={0}>型 1：十字型 (1-4-1)</option>
+                                            <option value={1}>型 2：T字型 (1-4-1)</option>
+                                            <option value={2}>型 3：(1-4-1)</option>
+                                            <option value={3}>型 4：(1-4-1)</option>
+                                            <option value={4}>型 5：Z字長型 (1-4-1)</option>
+                                            <option value={5}>型 6：(1-4-1)</option>
+                                        </optgroup>
+                                        <optgroup label="2-3-1 型 (3種)" className="bg-slate-800 text-white">
+                                            <option value={6}>型 7：(2-3-1)</option>
+                                            <option value={7}>型 8：(2-3-1)</option>
+                                            <option value={8}>型 9：(2-3-1)</option>
+                                        </optgroup>
+                                        <optgroup label="2-2-2 型 與 3-3 型" className="bg-slate-800 text-white">
+                                            <option value={9}>型 10：階梯型 (2-2-2)</option>
+                                            <option value={10}>型 11：(3-3)</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            ) : (shapeType === 'prism' || shapeType === 'pyramid') ? (
+                                <div className="flex items-center gap-1.5 bg-blue-950/80 border border-blue-700/80 rounded-lg px-2 py-1">
+                                    <span className="text-xs text-blue-300 font-bold whitespace-nowrap">展開樣式:</span>
+                                    <select 
+                                        value={shapeType === 'prism' ? prismNetType : pyramidNetType} 
+                                        onChange={(e) => { 
+                                            if (shapeType === 'prism') setPrismNetType(e.target.value);
+                                            else setPyramidNetType(e.target.value);
+                                            resetPositions(); 
+                                            resetView(); 
+                                        }}
+                                        className="bg-transparent text-blue-200 font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                        id="netTypeSelect"
+                                    >
+                                        {shapeType === 'prism' ? (
+                                            <>
+                                                <option value="strip" className="bg-slate-800 text-white">鏈狀展開 (Strip)</option>
+                                                <option value="star" className="bg-slate-800 text-white">星形展開 (Star)</option>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value="star" className="bg-slate-800 text-white">星形展開 (Star)</option>
+                                                <option value="chain" className="bg-slate-800 text-white">扇形展開 (Fan)</option>
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
+                            ) : null}
+
+                            {/* 邊數下拉選單 (非平滑曲面且非正方體時) */}
+                            {!isSmooth && shapeType !== 'cube' && (
+                                <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1">
+                                    <span className="text-xs text-slate-400 font-bold whitespace-nowrap">邊數:</span>
+                                    <select 
+                                        value={sides} 
+                                        onChange={(e) => { 
+                                            setSides(parseInt(e.target.value)); 
+                                            resetPositions(); 
+                                            resetView(); 
+                                        }}
+                                        className="bg-transparent text-cyan-300 font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                        id="sidesSelect"
+                                    >
+                                        <option value={3} className="bg-slate-800 text-white">3 邊 (三角)</option>
+                                        <option value={4} className="bg-slate-800 text-white">4 邊 (四角)</option>
+                                        <option value={5} className="bg-slate-800 text-white">5 邊 (五角)</option>
+                                        <option value={6} className="bg-slate-800 text-white">6 邊 (六角)</option>
+                                        <option value={8} className="bg-slate-800 text-white">8 邊 (八角)</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 右側：檢核任務開關與視角切換 */}
+                        <div className="flex items-center gap-2">
+                            {/* 視角操作模式按鈕 */}
+                            <div className="hidden sm:flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                                <button 
+                                    onClick={() => setInteractionMode('rotate')} 
+                                    className={`px-2.5 py-1 text-xs font-bold transition-colors ${interactionMode === 'rotate' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                    title="旋轉視角"
+                                >
+                                    旋轉
+                                </button>
+                                <button 
+                                    onClick={() => setInteractionMode('pan')} 
+                                    className={`px-2.5 py-1 text-xs font-bold transition-colors ${interactionMode === 'pan' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                    title="平移視角"
+                                >
+                                    平移
+                                </button>
+                            </div>
+                            <button 
+                                onClick={resetView} 
+                                className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                            >
+                                重置視角
+                            </button>
+
+                            {/* 頂部檢核任務切換按鈕 */}
+                            <button 
+                                onClick={() => setQuizOpen(!quizOpen)} 
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ${quizOpen ? 'bg-purple-600 text-white ring-2 ring-purple-300' : 'bg-purple-700/80 text-purple-100 hover:bg-purple-600'}`}
+                                id="toggleQuizBtn"
+                            >
+                                <span>📝 檢核任務 (題 {quizStep + 1}/5)</span>
+                                <span>{quizOpen ? '▲ 收合' : '▼ 展開'}</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* --- 頂部折疊式檢核任務面板 (HUD) --- */}
+                    {quizOpen && (
+                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-purple-500 px-4 py-3 z-20 shrink-0 max-h-[50vh] overflow-y-auto animate-fadeIn">
+                            <div className="max-w-4xl mx-auto">
+                                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-purple-100">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">第 2 關檢核</span>
+                                        <span className="text-xs text-purple-700 font-bold">邊操作邊回答：題 {quizStep + 1} / 5</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {[0, 1, 2, 3, 4].map(s => (
+                                            <button 
+                                                key={s} 
+                                                onClick={() => {
+                                                    setQuizStep(s);
+                                                    setQuizFeedback(null);
+                                                    if (s === 0) setShapeType('prism');
+                                                    else if (s === 1 || s === 2) setShapeType('cylinder');
+                                                    else if (s === 3) setShapeType('pyramid');
+                                                    else if (s === 4) setShapeType('cone');
+                                                }}
+                                                className={`w-6 h-6 rounded-full text-xs font-bold transition-all ${quizStep === s ? 'bg-purple-600 text-white ring-2 ring-purple-300' : 'bg-slate-100 text-slate-600 hover:bg-purple-100'}`}
+                                            >
+                                                {s + 1}
+                                            </button>
+                                        ))}
+                                        <button 
+                                            onClick={() => setQuizOpen(false)} 
+                                            className="ml-2 text-slate-400 hover:text-slate-600 text-xs px-2 py-0.5 rounded border border-slate-200"
+                                        >
+                                            隱藏題目 ▲
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* 題 1：角柱側面展開形狀 */}
+                                {quizStep === 0 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                            <span>🎯 任務 1：角柱展開後的「側面」是什麼形狀？</span>
+                                            <span className="text-xs font-normal text-purple-700">(已自動切換至角柱)</span>
+                                        </div>
+                                        <p className="text-xs text-slate-600">
+                                            請利用下方展示區的「展開滑桿」將角柱展開。觀察展開圖：角柱所有側面連在一起會變成一個大什麼形？
+                                        </p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                                            {['長方形 (大長方形)', '三角形', '圓形', '梯形'].map((opt, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (i === 0) {
+                                                            setQuizFeedback({ ok: true, msg: '🎉 答對了！角柱的側面展開連成一個大長方形，長等於底面周長，寬等於柱高。' });
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '不對喔，再拉動滑桿看一次展開圖，側面全都是長方形拼成的大長方形！' });
+                                                        }
+                                                    }}
+                                                    className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-center transition-all active:scale-95"
+                                                >
+                                                    {opt}
                                                 </button>
                                             ))}
                                         </div>
-                                    </div>
-
-                                    {/* 動態屬性面板 */}
-                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
-                                        {/* 正方體特有面板 */}
-                                        {shapeType === 'cube' && (
-                                            <div>
-                                                <label className="block text-sm font-bold text-slate-700 mb-3 text-indigo-700">正方體展開圖 (11種) / 11 Cube Nets</label>
-                                                <div className="grid grid-cols-6 gap-1.5">
-                                                    <div className="col-span-6 text-xs text-slate-500 font-bold mt-1">1-4-1 型 (6種)</div>
-                                                    {[0,1,2,3,4,5].map(i => (
-                                                        <button key={i} onClick={() => { setCubeNetType(i); resetAnimation(); resetView(); }} className={`py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === i ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>{i+1}</button>
-                                                    ))}
-                                                    <div className="col-span-6 text-xs text-slate-500 font-bold mt-2">2-3-1 型 (3種)</div>
-                                                    {[6,7,8].map(i => (
-                                                        <button key={i} onClick={() => { setCubeNetType(i); resetAnimation(); resetView(); }} className={`col-span-2 py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === i ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>型 {i+1}</button>
-                                                    ))}
-                                                    <div className="col-span-6 text-xs text-slate-500 font-bold mt-2">2-2-2 型 與 3-3 型</div>
-                                                    <button onClick={() => { setCubeNetType(9); resetAnimation(); resetView(); }} className={`col-span-3 py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === 9 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>型 10 (2-2-2)</button>
-                                                    <button onClick={() => { setCubeNetType(10); resetAnimation(); resetView(); }} className={`col-span-3 py-1.5 rounded text-xs font-bold border transition-colors ${cubeNetType === 10 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'}`}>型 11 (3-3)</button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* 一般多面體面板 */}
-                                        {shapeType !== 'cube' && (
-                                            <>
-                                                {(shapeType === 'prism' || shapeType === 'pyramid') && (
-                                                    <div>
-                                                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2"><IconGrid /> 展開圖樣式 / Net Type</label>
-                                                        <div className="flex bg-white border border-slate-200 p-1 rounded-lg">
-                                                            {shapeType === 'prism' ? (
-                                                                <>
-                                                                    <button onClick={() => { setPrismNetType('strip'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${prismNetType === 'strip' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconStrip /> <span>鏈狀展開</span></button>
-                                                                    <button onClick={() => { setPrismNetType('star'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${prismNetType === 'star' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconStar /> <span>星形展開</span></button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <button onClick={() => { setPyramidNetType('star'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${pyramidNetType === 'star' ? 'bg-pink-50 text-pink-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconGrid /> <span>星形展開</span></button>
-                                                                    <button onClick={() => { setPyramidNetType('chain'); resetPositions(); resetView(); }} className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2 ${pyramidNetType === 'chain' ? 'bg-pink-50 text-pink-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><IconFan /> <span>扇形展開</span></button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {!isSmooth && (
-                                                    <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-2">底面邊數 / Sides: <span className="text-blue-600 text-lg">{sides}</span></label>
-                                                        <input type="range" min="3" max="12" value={sides} onChange={(e) => { setSides(parseInt(e.target.value)); resetPositions(); resetView(); }} className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                        
-                                        {/* 通用尺寸調整 */}
-                                        <div className="pt-2 border-t border-slate-200">
-                                            <label className="block text-sm font-bold text-slate-700 mb-3 text-emerald-700">尺寸調整 / Dimensions</label>
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
-                                                        <span>{shapeType === 'cube' ? '正方體大小 / Cube Size' : (isSmooth ? '底面半徑 / Base Radius' : '底面側邊長度 / Base Edge Length')}</span>
-                                                        <span className="text-emerald-600">{baseSize}</span>
-                                                    </div>
-                                                    <input type="range" min="20" max="150" value={baseSize} onChange={(e) => { setBaseSize(parseInt(e.target.value)); resetView(); }} className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
-                                                </div>
-                                                {shapeType !== 'cube' && (
-                                                    <div>
-                                                        <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
-                                                            <span>側面高度 / Height</span>
-                                                            <span className="text-emerald-600">{shapeHeight}</span>
-                                                        </div>
-                                                        <input type="range" min="20" max="250" value={shapeHeight} onChange={(e) => { setShapeHeight(parseInt(e.target.value)); resetView(); }} className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex flex-col justify-between">
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-3">動畫控制 / Animation</label>
-                                        <div className="flex gap-3 mb-4">
-                                            <button onClick={startAnimation} className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-white font-bold transition-all ${isAnimating ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200'}`}>{isAnimating ? <><IconPause /> <span className="ml-2">暫停 Pause</span></> : <><IconPlay /> <span className="ml-2">播放 Play</span></>}</button>
-                                            <button onClick={resetAnimation} className="px-4 py-3 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-all font-bold"><IconRotateCcw /></button>
-                                        </div>
-                                        <div className="relative pt-1">
-                                            <div className="flex justify-between text-xs font-bold text-slate-500 mb-2"><span>平面展開 (2D Net)</span><span>立體模型 (3D Solid)</span></div>
-                                            <input type="range" min="0" max="1" step="0.01" value={animationProgress} onChange={(e) => { setAnimationProgress(parseFloat(e.target.value)); setIsAnimating(false); }} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600" />
-                                        </div>
-                                    </div>
-
-                                    {/* 動態拓撲連接點調整 */}
-                                    {((shapeType === 'prism' && prismNetType === 'strip') || shapeType === 'cylinder') && animationProgress < 0.2 && (
-                                        <div className="mt-4 pt-4 border-t border-slate-100 bg-blue-50/50 p-4 rounded-xl">
-                                            <p className="text-xs text-slate-700 mb-3 font-bold flex items-center gap-1">✨ 調整展開圖拓撲 (Topology Configurator)</p>
-                                            <div className="flex gap-4">
-                                                <div className="flex-1">
-                                                    <span className="text-xs text-yellow-700 font-bold block mb-1">上底連接點</span>
-                                                    <div className="flex gap-1"><button onClick={() => setTopBasePosition(p => Math.max(0, p-1))} className="bg-white border border-yellow-200 text-yellow-700 hover:bg-yellow-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">←</button><div className="flex-1 text-center text-xs font-bold py-1 bg-yellow-100 text-yellow-800 rounded border border-yellow-200">側 {topBasePosition+1}</div><button onClick={() => setTopBasePosition(p => Math.min(renderSides-1, p+1))} className="bg-white border border-yellow-200 text-yellow-700 hover:bg-yellow-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">→</button></div>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <span className="text-xs text-orange-700 font-bold block mb-1">下底連接點</span>
-                                                    <div className="flex gap-1"><button onClick={() => setBottomBasePosition(p => Math.max(0, p-1))} className="bg-white border border-orange-200 text-orange-700 hover:bg-orange-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">←</button><div className="flex-1 text-center text-xs font-bold py-1 bg-orange-100 text-orange-800 rounded border border-orange-200">側 {bottomBasePosition+1}</div><button onClick={() => setBottomBasePosition(p => Math.min(renderSides-1, p+1))} className="bg-white border border-orange-200 text-orange-700 hover:bg-orange-50 px-2 py-1 rounded text-xs flex-1 shadow-sm font-bold">→</button></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {((shapeType === 'pyramid' && pyramidNetType === 'chain') || shapeType === 'cone') && animationProgress < 0.2 && (
-                                        <div className="mt-4 pt-4 border-t border-slate-100 bg-pink-50/50 p-4 rounded-xl">
-                                            <p className="text-xs text-slate-700 mb-3 font-bold flex items-center gap-1">✨ 調整展開圖拓撲 (Topology Configurator)</p>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => setPyramidBasePosition(p => Math.max(0, p-1))} className="bg-white shadow-sm border border-pink-200 text-pink-700 hover:bg-pink-50 px-3 py-1.5 rounded font-bold text-sm">←</button>
-                                                <div className="flex-1 text-center font-bold text-pink-800 text-xs bg-pink-100 py-1.5 rounded border border-pink-200">底面接在第 <span className="text-base mx-1">{pyramidBasePosition + 1}</span> 塊側面</div>
-                                                <button onClick={() => setPyramidBasePosition(p => Math.min(renderSides-1, p+1))} className="bg-white shadow-sm border border-pink-200 text-pink-700 hover:bg-pink-50 px-3 py-1.5 rounded font-bold text-sm">→</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-800 rounded-xl p-2 shadow-inner relative overflow-hidden noselect">
-                            <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-white border border-slate-600 pointer-events-none">
-                                {animationProgress < 0.05 ? '平面展開圖 (2D Net)' : animationProgress > 0.95 ? '立體圖形 (3D Solid)' : '組合中... (Rigid Body Folding)'}
-                            </div>
-                            
-                            <div className="absolute top-4 right-4 z-10 flex gap-2">
-                                <div className="bg-black/50 backdrop-blur rounded-lg border border-slate-600 flex overflow-hidden">
-                                    <button onClick={() => setInteractionMode('pan')} className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-colors ${interactionMode === 'pan' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-slate-300'}`}><IconMove /> 平移</button>
-                                    <div className="w-px bg-slate-600"></div>
-                                    <button onClick={() => setInteractionMode('rotate')} className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-colors ${interactionMode === 'rotate' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-slate-300'}`}><Icon3DRotate /> 旋轉</button>
-                                </div>
-                                <button onClick={resetView} className="bg-black/50 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-600 transition-colors">重置視角</button>
-                            </div>
-
-                            {/* --- 國小五下數學：展開圖互動小檢核 HUD --- */}
-                            {quizOpen ? (
-                                <div className="absolute top-16 right-4 z-20 w-80 md:w-96 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-purple-200 p-4">
-                                    <div className="flex justify-between items-center pb-2 mb-3 border-b border-purple-100">
-                                        <div className="flex items-center gap-2">
-                                            <span className="bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">展開圖檢核</span>
-                                            <span className="text-xs text-purple-700 font-bold">題 {quizStep + 1} / 5</span>
-                                        </div>
-                                        <button onClick={() => setQuizOpen(false)} className="text-slate-400 hover:text-slate-600 text-xs px-1.5 py-0.5 rounded border border-slate-200">
-                                            收合 ✕
-                                        </button>
-                                    </div>
-
-                                    {/* 題 1：角柱側面展開形狀 */}
-                                    {quizStep === 0 && (
-                                        <div className="space-y-3">
-                                            <div className="text-sm font-bold text-slate-800">
-                                                🎯 任務 1：角柱展開後的「側面」是什麼形狀？
-                                            </div>
-                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                請拉動畫面上的「展開滑桿」將角柱展開。觀察展開圖：角柱所有側面連在一起會變成一個大什麼形？
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {['長方形 (大長方形)', '三角形', '圓形', '梯形'].map((opt, i) => (
-                                                    <button
-                                                        key={i}
-                                                        onClick={() => {
-                                                            if (i === 0) {
-                                                                setQuizFeedback({ ok: true, msg: '答對了！角柱的側面展開連成一個大長方形，長等於底面周長，寬等於柱高。' });
-                                                            } else {
-                                                                setQuizFeedback({ ok: false, msg: '不對喔，再看一次展開圖，側面都是長方形拼成的大長方形！' });
-                                                            }
-                                                        }}
-                                                        className="p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left"
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            {quizFeedback && (
-                                                <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                    {quizFeedback.msg}
-                                                </div>
-                                            )}
-                                            {quizFeedback && quizFeedback.ok && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setQuizStep(1);
-                                                        setQuizFeedback(null);
-                                                        setShapeType('cylinder');
-                                                        setAnimationProgress(0);
-                                                    }}
-                                                    className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                >
-                                                    前往第 2 題 (圓柱側面展開) →
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 題 2：圓柱側面展開形狀 */}
-                                    {quizStep === 1 && (
-                                        <div className="space-y-3">
-                                            <div className="text-sm font-bold text-slate-800">
-                                                🎯 任務 2：圓柱的側面展開後是什麼形狀？
-                                            </div>
-                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                畫面已切換為圓柱。請拉動展開滑桿：圓柱原本立體時圓滑的曲面，剪開攤平後會變成什麼形狀？
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {['長方形 (Rectangle)', '扇形', '圓形', '橢圓形'].map((opt, i) => (
-                                                    <button
-                                                        key={i}
-                                                        onClick={() => {
-                                                            if (i === 0) {
-                                                                setQuizFeedback({ ok: true, msg: '完全正確！圓柱原本立體的曲面，剪開攤平後會變成一個標準的「長方形」！' });
-                                                            } else {
-                                                                setQuizFeedback({ ok: false, msg: '再拉拉看滑桿觀察，圓柱展開後側面攤平是一整張長方形喔！' });
-                                                            }
-                                                        }}
-                                                        className="p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left"
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            {quizFeedback && (
-                                                <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                    {quizFeedback.msg}
-                                                </div>
-                                            )}
-                                            {quizFeedback && quizFeedback.ok && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setQuizStep(2);
-                                                        setQuizFeedback(null);
-                                                    }}
-                                                    className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                >
-                                                    前往第 3 題 (圓柱側面特性) →
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 題 3：圓柱側面展開的特性 */}
-                                    {quizStep === 2 && (
-                                        <div className="space-y-3">
-                                            <div className="text-sm font-bold text-slate-800">
-                                                🎯 任務 3：圓柱側面展開長方形的特性
-                                            </div>
-                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                觀察圓柱展開圖：展開後長方形的「長」剛好包覆底面圓的哪裡？「寬」是圓柱的什麼？
-                                            </p>
-                                            <div className="space-y-1.5">
-                                                {[
-                                                    { text: '長方形的「長 ＝ 底面圓周長」，「寬 ＝ 圓柱的高」', right: true },
-                                                    { text: '長方形的「長 ＝ 底面半徑」，「寬 ＝ 底面直徑」', right: false },
-                                                    { text: '長方形的「長 ＝ 底面圓面積」，「寬 ＝ 圓柱體積」', right: false }
-                                                ].map((item, i) => (
-                                                    <button
-                                                        key={i}
-                                                        onClick={() => {
-                                                            if (item.right) {
-                                                                setQuizFeedback({ ok: true, msg: '太棒了！這是圓柱展開圖最重要的考點：長方形長邊＝底面圓周長，寬邊＝圓柱的高！' });
-                                                            } else {
-                                                                setQuizFeedback({ ok: false, msg: '因為長方形要剛好繞底面圓形一整圈，所以長邊等於「底面圓周長」喔！' });
-                                                            }
-                                                        }}
-                                                        className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left"
-                                                    >
-                                                        {item.text}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            {quizFeedback && (
-                                                <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                    {quizFeedback.msg}
-                                                </div>
-                                            )}
-                                            {quizFeedback && quizFeedback.ok && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setQuizStep(3);
-                                                        setQuizFeedback(null);
-                                                        setShapeType('pyramid');
-                                                        setAnimationProgress(0);
-                                                    }}
-                                                    className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                >
-                                                    前往第 4 題 (角錐展開) →
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 題 4：角錐展開側面形狀 */}
-                                    {quizStep === 3 && (
-                                        <div className="space-y-3">
-                                            <div className="text-sm font-bold text-slate-800">
-                                                🎯 任務 4：角錐展開圖的「側面」是什麼形狀？
-                                            </div>
-                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                畫面已切換為角錐。請拉動滑桿展開：角錐展開圖由 1 個底面和幾個什麼形狀的側面組成？
-                                            </p>
-                                            <div className="space-y-1.5">
-                                                {[
-                                                    { text: '1 個底面 + n 個「三角形」側面 (尖端聚在錐頂)', right: true },
-                                                    { text: '2 個底面 + n 個長方形側面', right: false },
-                                                    { text: '只有 1 個扇形側面', right: false }
-                                                ].map((item, i) => (
-                                                    <button
-                                                        key={i}
-                                                        onClick={() => {
-                                                            if (item.right) {
-                                                                setQuizFeedback({ ok: true, msg: '完全正確！角錐展開圖的側面全都是三角形，組裝時尖端聚在錐頂！' });
-                                                            } else {
-                                                                setQuizFeedback({ ok: false, msg: '角柱側面才是長方形喔！角錐側面都是「三角形」。' });
-                                                            }
-                                                        }}
-                                                        className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left"
-                                                    >
-                                                        {item.text}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            {quizFeedback && (
-                                                <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                    {quizFeedback.msg}
-                                                </div>
-                                            )}
-                                            {quizFeedback && quizFeedback.ok && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setQuizStep(4);
-                                                        setQuizFeedback(null);
-                                                        setShapeType('cone');
-                                                        setAnimationProgress(0);
-                                                    }}
-                                                    className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                >
-                                                    前往第 5 題 (圓錐展開) →
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 題 5：圓錐展開側面形狀與特性 */}
-                                    {quizStep === 4 && (
-                                        <div className="space-y-3">
-                                            <div className="text-sm font-bold text-slate-800">
-                                                🎯 任務 5：圓錐的側面展開後是什麼形狀與特性？
-                                            </div>
-                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                畫面已切換為圓錐。拉動展開滑桿：圓錐側面原本是曲面，攤開後是什麼形狀？弧長等於什麼？
-                                            </p>
-                                            <div className="space-y-1.5">
-                                                {[
-                                                    { text: '側面展開是「扇形」，扇形的弧長剛好等於「底面圓周長」', right: true },
-                                                    { text: '側面展開是長方形，長邊等於底面直徑', right: false },
-                                                    { text: '側面展開是三角形，底邊等於圓錐的高', right: false }
-                                                ].map((item, i) => (
-                                                    <button
-                                                        key={i}
-                                                        onClick={() => {
-                                                            if (item.right) {
-                                                                setQuizFeedback({ ok: true, msg: '太棒了！圓錐側面攤開後是扇形，扇形的弧長剛好貼合底面圓周長！' });
-                                                                setQuizCompleted(true);
-                                                                try {
-                                                                    if (window.parent) {
-                                                                        window.parent.postMessage({ type: 'STEP_COMPLETED', stepId: 's2' }, '*');
-                                                                    }
-                                                                    const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
-                                                                    if (!p.done.includes('s2')) {
-                                                                        p.done.push('s2');
-                                                                        localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
-                                                                    }
-                                                                } catch(e) {}
-                                                            } else {
-                                                                setQuizFeedback({ ok: false, msg: '圓錐側面攤開像扇子一樣，是「扇形」喔！' });
-                                                            }
-                                                        }}
-                                                        className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left"
-                                                    >
-                                                        {item.text}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            {quizFeedback && (
-                                                <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                    {quizFeedback.msg}
-                                                </div>
-                                            )}
-                                            {quizCompleted && (
-                                                <div className="pt-2">
-                                                    <div className="bg-amber-100 text-amber-900 p-2.5 rounded-xl text-xs font-bold text-center mb-2">
-                                                        🎉 恭喜完成第 2 關展開圖操作檢核！
-                                                    </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-lg text-xs leading-relaxed flex items-center justify-between gap-2 ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                <span>{quizFeedback.msg}</span>
+                                                {quizFeedback.ok && (
                                                     <button 
                                                         onClick={() => {
-                                                            if (window.parent && window.parent.document.getElementById('viewerBack')) {
-                                                                window.parent.document.getElementById('viewerBack').click();
-                                                            }
+                                                            setQuizStep(1);
+                                                            setQuizFeedback(null);
+                                                            setShapeType('cylinder');
+                                                            setAnimationProgress(0);
                                                         }}
-                                                        className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                                        className="px-3 py-1 bg-purple-600 text-white rounded-md text-xs font-bold hover:bg-purple-700 whitespace-nowrap shrink-0 shadow"
                                                     >
-                                                        ← 回到學習地圖，挑戰第 3 關球體！
+                                                        前往第 2 題 (圓柱) →
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 2：圓柱側面展開形狀 */}
+                                {quizStep === 1 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                            <span>🎯 任務 2：圓柱的側面展開後是什麼形狀？</span>
+                                            <span className="text-xs font-normal text-purple-700">(已切換至圓柱)</span>
+                                        </div>
+                                        <p className="text-xs text-slate-600">
+                                            請在下方拉動滑桿展開：圓柱原本立體時圓滑的曲面，剪開攤平後會變成什麼幾何形狀？
+                                        </p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                                            {['長方形 (Rectangle)', '扇形', '圓形', '橢圓形'].map((opt, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (i === 0) {
+                                                            setQuizFeedback({ ok: true, msg: '🎉 完全正確！圓柱原本立體的曲面，剪開攤平後會變成一個標準的「長方形」！' });
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '再拉拉看展開滑桿觀察，圓柱展開後側面攤平是一整張長方形喔！' });
+                                                        }
+                                                    }}
+                                                    className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-center transition-all active:scale-95"
+                                                >
+                                                    {opt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-lg text-xs leading-relaxed flex items-center justify-between gap-2 ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                <span>{quizFeedback.msg}</span>
+                                                {quizFeedback.ok && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            setQuizStep(2);
+                                                            setQuizFeedback(null);
+                                                        }}
+                                                        className="px-3 py-1 bg-purple-600 text-white rounded-md text-xs font-bold hover:bg-purple-700 whitespace-nowrap shrink-0 shadow"
+                                                    >
+                                                        前往第 3 題 (側面特性) →
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 3：圓柱側面展開的特性 */}
+                                {quizStep === 2 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-900">
+                                            🎯 任務 3：圓柱側面展開長方形的特性
+                                        </div>
+                                        <p className="text-xs text-slate-600">
+                                            觀察圓柱展開圖：展開後長方形的「長」剛好包覆底面圓的哪裡？「寬」是圓柱的什麼？
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                                            {[
+                                                { text: '「長＝底面圓周長」，「寬＝圓柱的高」', right: true },
+                                                { text: '「長＝底面半徑」，「寬＝底面直徑」', right: false },
+                                                { text: '「長＝底面圓面積」，「寬＝圓柱體積」', right: false }
+                                            ].map((item, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (item.right) {
+                                                            setQuizFeedback({ ok: true, msg: '🎉 太棒了！這是圓柱展開最重要的概念：長邊＝底面圓周長，寬邊＝圓柱的高！' });
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '長方形要剛好繞底面圓形一整圈，所以長邊等於「底面圓周長」喔！' });
+                                                        }
+                                                    }}
+                                                    className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left transition-all active:scale-95"
+                                                >
+                                                    {item.text}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-lg text-xs leading-relaxed flex items-center justify-between gap-2 ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                <span>{quizFeedback.msg}</span>
+                                                {quizFeedback.ok && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            setQuizStep(3);
+                                                            setQuizFeedback(null);
+                                                            setShapeType('pyramid');
+                                                            setAnimationProgress(0);
+                                                        }}
+                                                        className="px-3 py-1 bg-purple-600 text-white rounded-md text-xs font-bold hover:bg-purple-700 whitespace-nowrap shrink-0 shadow"
+                                                    >
+                                                        前往第 4 題 (角錐) →
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 4：角錐展開側面形狀 */}
+                                {quizStep === 3 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                            <span>🎯 任務 4：角錐展開圖的「側面」是什麼形狀？</span>
+                                            <span className="text-xs font-normal text-purple-700">(已切換至角錐)</span>
+                                        </div>
+                                        <p className="text-xs text-slate-600">
+                                            請在下方拉動滑桿展開角錐：角錐展開圖由 1 個底面和幾個什麼形狀的側面組成？
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                                            {[
+                                                { text: '1 個底面 + n 個「三角形」側面 (尖端聚在頂點)', right: true },
+                                                { text: '2 個底面 + n 個長方形側面', right: false },
+                                                { text: '只有 1 個扇形側面', right: false }
+                                            ].map((item, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (item.right) {
+                                                            setQuizFeedback({ ok: true, msg: '🎉 完全正確！角錐展開圖的側面全都是三角形，組裝時尖端聚在錐頂！' });
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '角柱側面才是長方形喔！角錐側面都是「三角形」。' });
+                                                        }
+                                                    }}
+                                                    className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left transition-all active:scale-95"
+                                                >
+                                                    {item.text}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-lg text-xs leading-relaxed flex items-center justify-between gap-2 ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                <span>{quizFeedback.msg}</span>
+                                                {quizFeedback.ok && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            setQuizStep(4);
+                                                            setQuizFeedback(null);
+                                                            setShapeType('cone');
+                                                            setAnimationProgress(0);
+                                                        }}
+                                                        className="px-3 py-1 bg-purple-600 text-white rounded-md text-xs font-bold hover:bg-purple-700 whitespace-nowrap shrink-0 shadow"
+                                                    >
+                                                        前往第 5 題 (圓錐) →
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 題 5：圓錐展開側面形狀與特性 */}
+                                {quizStep === 4 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                            <span>🎯 任務 5：圓錐的側面展開後是什麼形狀與特性？</span>
+                                            <span className="text-xs font-normal text-purple-700">(已切換至圓錐)</span>
+                                        </div>
+                                        <p className="text-xs text-slate-600">
+                                            拉動展開滑桿觀察：圓錐側面原本是立體曲面，攤開後是什麼形狀？扇形弧長等於什麼？
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                                            {[
+                                                { text: '側面展開是「扇形」，弧長剛好等於「底面圓周長」', right: true },
+                                                { text: '側面展開是長方形，長邊等於底面直徑', right: false },
+                                                { text: '側面展開是三角形，底邊等於圓錐的高', right: false }
+                                            ].map((item, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (item.right) {
+                                                            setQuizFeedback({ ok: true, msg: '🎉 太棒了！圓錐側面攤開後是扇形，扇形的弧長剛好貼合底面圓周長！' });
+                                                            setQuizCompleted(true);
+                                                            try {
+                                                                if (window.parent) {
+                                                                    window.parent.postMessage({ type: 'STEP_COMPLETED', stepId: 's2' }, '*');
+                                                                }
+                                                                const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                                                                if (!p.done.includes('s2')) {
+                                                                    p.done.push('s2');
+                                                                    localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
+                                                                }
+                                                            } catch(e) {}
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: '圓錐側面攤開像扇子一樣，是「扇形」喔！' });
+                                                        }
+                                                    }}
+                                                    className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left transition-all active:scale-95"
+                                                >
+                                                    {item.text}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-lg text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {quizCompleted && (
+                                            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+                                                <div className="flex-1 text-center sm:text-left text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg">
+                                                    🎉 恭喜完成第 2 關展開圖與組合檢核任務！
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        try {
+                                                            if (window.parent) {
+                                                                window.parent.postMessage({ type: 'GO_NEXT_STEP', currentStepId: 's2' }, '*');
+                                                            }
+                                                        } catch(e) {}
+                                                    }}
+                                                    className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-xs font-bold shadow-lg hover:brightness-110 active:scale-95 whitespace-nowrap"
+                                                    id="btnGoNextStep3"
+                                                >
+                                                    🚀 前往第 3 關：生活中的球體 →
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- 主展示區 (滿版 3D/2D 幾何畫布 + 浮動控制列) --- */}
+                    <main className="flex-1 relative w-full h-full overflow-hidden bg-slate-950">
+                        {/* 左上角狀態浮水印 */}
+                        <div className="absolute top-3 left-3 z-10 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-slate-300 border border-slate-700/60 pointer-events-none shadow">
+                            {animationProgress < 0.05 ? '📄 2D 平面展開圖' : animationProgress > 0.95 ? '🧊 3D 立體模型' : '🔄 組合摺疊中...'}
+                        </div>
+
+                        {/* 拓撲連接點快速微調 (當處於 2D 展開圖且有自訂連接點時浮動在左下方) */}
+                        {animationProgress < 0.2 && ((shapeType === 'prism' && prismNetType === 'strip') || shapeType === 'cylinder') && (
+                            <div className="absolute top-12 left-3 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-xl p-2 text-xs text-slate-300 shadow-xl max-w-xs hidden sm:block">
+                                <div className="font-bold text-amber-300 mb-1">底面拓撲連接點</div>
+                                <div className="flex gap-2">
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-amber-200">上:</span>
+                                        <button onClick={() => setTopBasePosition(p => Math.max(0, p-1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">◀</button>
+                                        <span className="font-bold text-amber-400">{topBasePosition + 1}</span>
+                                        <button onClick={() => setTopBasePosition(p => Math.min(renderSides-1, p+1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">▶</button>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-orange-200">下:</span>
+                                        <button onClick={() => setBottomBasePosition(p => Math.max(0, p-1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">◀</button>
+                                        <span className="font-bold text-orange-400">{bottomBasePosition + 1}</span>
+                                        <button onClick={() => setBottomBasePosition(p => Math.min(renderSides-1, p+1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">▶</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* SVG 展開圖/立體畫布 */}
+                        <svg 
+                            viewBox="0 0 800 500" 
+                            className={`w-full h-full object-contain touch-none select-none ${isDragging ? (interactionMode === 'pan' ? 'cursor-grabbing' : 'cursor-rotate') : (interactionMode === 'pan' ? 'cursor-grab' : 'cursor-rotate')}`}
+                            onMouseDown={(e) => { if (e.button===0) handleStart(e.clientX, e.clientY); }}
+                            onMouseMove={(e) => { e.preventDefault(); handleMove(e.clientX, e.clientY); }}
+                            onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
+                            onWheel={handleWheel}
+                            onTouchStart={(e) => { if(e.touches.length===1) handleStart(e.touches[0].clientX, e.touches[0].clientY); }}
+                            onTouchMove={(e) => { if(e.touches.length===1) handleMove(e.touches[0].clientX, e.touches[0].clientY); }}
+                            onTouchEnd={handleMouseUp}
+                        >
+                            <defs>
+                                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" strokeWidth="1"/>
+                                </pattern>
+                            </defs>
+                            
+                            <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
+                                <rect x="-2000" y="-2000" width="4000" height="4000" fill="url(#grid)" />
+                                {renderPolygons()}
+                            </g>
+                        </svg>
+
+                        {/* --- 浮動於展示頁面底部的動畫控制列 (專為 iPad 與觸控設計) --- */}
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl flex flex-col gap-2">
+                            {/* 上排：播放/暫停按鈕、重置按鈕、2D/3D 快選鈕、進度百分比 */}
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={startAnimation} 
+                                        className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-white font-bold text-xs md:text-sm transition-all shadow-md active:scale-95 ${isAnimating ? 'bg-amber-500 hover:bg-amber-600' : 'bg-purple-600 hover:bg-purple-700'}`}
+                                        id="btnPlayAnimation"
+                                    >
+                                        {isAnimating ? <><IconPause /> 暫停</> : <><IconPlay /> 動畫播放</>}
+                                    </button>
+                                    <button 
+                                        onClick={resetAnimation} 
+                                        className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl transition-all font-bold active:scale-95"
+                                        title="重置為展開狀態"
+                                    >
+                                        <IconRotateCcw />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                    <button 
+                                        onClick={() => { setIsAnimating(false); setAnimationProgress(0); }} 
+                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${animationProgress === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
+                                    >
+                                        📄 2D 展開
+                                    </button>
+                                    <button 
+                                        onClick={() => { setIsAnimating(false); setAnimationProgress(1); }} 
+                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${animationProgress === 1 ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
+                                    >
+                                        🧊 3D 立體
+                                    </button>
+                                    <span className="text-xs font-mono font-bold text-purple-300 min-w-[3rem] text-right">
+                                        {Math.round(animationProgress * 100)}%
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 下排：順滑拖曳進度滑桿 */}
+                            <div className="flex items-center gap-2 pt-1">
+                                <span className="text-[11px] text-slate-400 font-bold whitespace-nowrap hidden sm:inline">2D 展開</span>
+                                <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="1" 
+                                    step="0.005" 
+                                    value={animationProgress} 
+                                    onChange={(e) => { 
+                                        setAnimationProgress(parseFloat(e.target.value)); 
+                                        setIsAnimating(false); 
+                                    }} 
+                                    className="w-full h-2.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500" 
+                                    id="animationSlider"
+                                />
+                                <span className="text-[11px] text-slate-400 font-bold whitespace-nowrap hidden sm:inline">3D 立體</span>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PrismPyramidNet />);
+    </script>
+</body>
+</html>                                                      ← 回到學習地圖，挑戰第 3 關球體！
                                                     </button>
                                                 </div>
                                             )}
