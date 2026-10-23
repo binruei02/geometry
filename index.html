@@ -24,10 +24,15 @@
       --bad: #f43f5e;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html {
+      background-color: var(--bg1);
+      min-height: 100%;
+    }
     html, body { margin: 0; min-height: 100%; }
     body {
       font-family: 'Noto Sans TC', system-ui, sans-serif;
       color: var(--txt);
+      background-color: var(--bg1);
       background: radial-gradient(1200px 600px at 10% -10%, #6d28d9 0%, transparent 60%),
         radial-gradient(900px 500px at 110% 10%, #0ea5e9 0%, transparent 55%),
         linear-gradient(160deg, var(--bg1), var(--bg2));
@@ -193,9 +198,83 @@
 
     #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
 
+    /* 分享 QR Code 卡片 */
+    .share-card {
+      margin-top: 36px;
+      background: rgba(30, 27, 75, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 24px;
+      padding: 24px 28px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.45);
+    }
+    .share-info { flex: 1 1 320px; }
+    .share-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #1e1b4b;
+      background: var(--c3);
+      padding: 3px 12px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .share-info h3 { margin: 0 0 8px; font-size: 1.35rem; color: #ffffff; font-weight: 800; }
+    .share-info p { margin: 0 0 16px; color: var(--sub); font-size: 0.95rem; line-height: 1.6; }
+    .share-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    .share-btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .share-btn:hover { background: rgba(255, 255, 255, 0.25); transform: translateY(-2px); }
+    .share-btn.primary {
+      background: linear-gradient(90deg, var(--c2), #818cf8);
+      border: 0;
+      box-shadow: 0 4px 14px rgba(56,189,248,0.4);
+    }
+    .share-qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin: 0 auto;
+    }
+    .share-qr-img {
+      width: 140px;
+      height: 140px;
+      background: #fff;
+      padding: 8px;
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      cursor: pointer;
+      transition: transform 0.3s cubic-bezier(.2,.8,.2,1), box-shadow 0.3s;
+    }
+    .share-qr-img:hover { transform: scale(1.06); box-shadow: 0 12px 30px rgba(0,0,0,0.5); }
+    .share-qr-tip { font-size: 0.8rem; color: var(--sub); }
+
     @media (max-width: 600px) {
       .panel { padding: 20px 16px; border-radius: 22px; }
       .step { min-height: 0; }
+      .share-card { padding: 20px 18px; }
     }
   </style>
 </head>
@@ -230,6 +309,23 @@
 
     <section class="map" id="map" aria-label="學習地圖"></section>
 
+    <!-- 分享 QR Code 卡片 -->
+    <section class="share-card" id="shareSection" aria-label="分享與QR Code">
+      <div class="share-info">
+        <span class="share-badge">📱 免安裝．即開即玩</span>
+        <h3>分享「幾何形體任你玩」</h3>
+        <p>歡迎將網頁分享給同學、家長或在課堂投影使用！使用手機或 iPad 相機掃描 QR Code，即可立即探索 3D 立體幾何教具。</p>
+        <div class="share-btns">
+          <button class="share-btn primary" id="copyLinkBtn">📋 複製網站連結</button>
+          <button class="share-btn" id="zoomQrBtn">🔍 投影大圖</button>
+        </div>
+      </div>
+      <div class="share-qr-wrap">
+        <img src="qrcode.png" alt="幾何形體任你玩 網站 QR Code" class="share-qr-img" id="qrThumbnail" title="點擊放大 QR Code" />
+        <span class="share-qr-tip">點擊 QR Code 可放大投影</span>
+      </div>
+    </section>
+
     <footer>
       <p>學習進度會自動儲存在這台裝置上。<button class="reset" id="resetBtn">重新開始</button></p>
       <p>@秉叡老師陪你學數學系列-幾何形體任你玩</p>
@@ -239,6 +335,20 @@
   <!-- 關卡面板 -->
   <div class="panel-bg" id="panelBg" role="dialog" aria-modal="true">
     <div class="panel" id="panel"></div>
+  </div>
+
+  <!-- QR Code 投影放大視窗 -->
+  <div class="panel-bg" id="qrModal" role="dialog" aria-modal="true">
+    <div class="panel" style="max-width: 440px; text-align: center; padding: 32px 24px;">
+      <h2 style="font-size: 1.5rem; margin-bottom: 8px;">📱 掃描 QR Code</h2>
+      <p style="color: var(--sub); font-size: 0.95rem; margin-bottom: 20px;">請打開平板或手機相機，對準下方 QR Code 即可進入</p>
+      <div style="background: #ffffff; padding: 14px; border-radius: 24px; display: inline-block; box-shadow: 0 12px 30px rgba(0,0,0,0.4); margin-bottom: 20px;">
+        <img src="qrcode.png" alt="幾何形體任你玩 QR Code" style="width: 260px; height: 260px; display: block;" />
+      </div>
+      <div>
+        <button class="btn ghost" id="closeQrModal" style="min-width: 140px;">關閉視窗</button>
+      </div>
+    </div>
   </div>
 
   <!-- 教具檢視器 (所有關卡切換與返回首頁選單整合於各教具頂部導覽列中) -->
@@ -465,14 +575,18 @@
             openViewer(nextStep.page, nextStep.pageTitle);
           }
         }
-      } else if (e.data.type === 'TOGGLE_FULLSCREEN') {
-        if (!document.fullscreenElement) {
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(() => {});
+      } else if (e.data.type === 'TOGGLE_FULLSCREEN' || e.data.type === 'ENTER_FULLSCREEN' || e.data.type === 'EXIT_FULLSCREEN') {
+        const isCurrentlyFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        const wantsExit = e.data.type === 'EXIT_FULLSCREEN' || (e.data.type === 'TOGGLE_FULLSCREEN' && isCurrentlyFs);
+        if (wantsExit) {
+          if (isCurrentlyFs) {
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
           }
         } else {
-          if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
+          if (!isCurrentlyFs) {
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+            else if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
           }
         }
       } else if (e.data.type === 'STEP_COMPLETED') {
@@ -580,6 +694,44 @@
     $('resetBtn').onclick = () => {
       if (confirm('確定要清除學習進度，從第 1 關重新開始嗎？')) { state = { done: [], best: null }; save(); renderMap(); }
     };
+
+    // ===== 分享與 QR Code 彈窗 =====
+    function openQrModal() {
+      $('qrModal').classList.add('show');
+    }
+    function closeQrModal() {
+      $('qrModal').classList.remove('show');
+    }
+    $('zoomQrBtn').onclick = openQrModal;
+    $('qrThumbnail').onclick = openQrModal;
+    $('closeQrModal').onclick = closeQrModal;
+    $('qrModal').addEventListener('click', (e) => {
+      if (e.target === $('qrModal')) closeQrModal();
+    });
+
+    $('copyLinkBtn').onclick = () => {
+      const url = window.location.href.split('?')[0].split('#')[0];
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          alert('✅ 網站連結已複製到剪貼簿！\n' + url);
+        }).catch(() => {
+          prompt('請複製以下網站連結：', url);
+        });
+      } else {
+        prompt('請複製以下網站連結：', url);
+      }
+    };
+
+    // ===== 全螢幕廣播至當前教具 iframe =====
+    function broadcastFsChange() {
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      try {
+        $('viewerFrame')?.contentWindow?.postMessage({ type: 'FULLSCREEN_CHANGED', isFullscreen: isFs }, '*');
+      } catch (e) {}
+    }
+    document.addEventListener('fullscreenchange', broadcastFsChange);
+    document.addEventListener('webkitfullscreenchange', broadcastFsChange);
+    $('viewerFrame').addEventListener('load', broadcastFsChange);
 
     renderMap();
   </script>

@@ -146,29 +146,86 @@
 
             useEffect(() => {
                 const checkFs = () => {
-                    const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
+                    const parentDoc = (window.parent && window.parent !== window) ? window.parent.document : null;
+                    const isFs = !!(
+                        document.fullscreenElement || 
+                        document.webkitFullscreenElement ||
+                        (parentDoc && (parentDoc.fullscreenElement || parentDoc.webkitFullscreenElement))
+                    );
                     setIsFullscreen(isFs);
                 };
                 document.addEventListener('fullscreenchange', checkFs);
-                try { window.parent?.document?.addEventListener('fullscreenchange', checkFs); } catch(e) {}
+                document.addEventListener('webkitfullscreenchange', checkFs);
+                try {
+                    window.parent?.document?.addEventListener('fullscreenchange', checkFs);
+                    window.parent?.document?.addEventListener('webkitfullscreenchange', checkFs);
+                } catch(e) {}
+
+                const handleMsg = (e) => {
+                    if (e.data && e.data.type === 'FULLSCREEN_CHANGED') {
+                        setIsFullscreen(!!e.data.isFullscreen);
+                    }
+                };
+                window.addEventListener('message', handleMsg);
+
                 checkFs();
                 return () => {
                     document.removeEventListener('fullscreenchange', checkFs);
-                    try { window.parent?.document?.removeEventListener('fullscreenchange', checkFs); } catch(e) {}
+                    document.removeEventListener('webkitfullscreenchange', checkFs);
+                    try {
+                        window.parent?.document?.removeEventListener('fullscreenchange', checkFs);
+                        window.parent?.document?.removeEventListener('webkitfullscreenchange', checkFs);
+                    } catch(e) {}
+                    window.removeEventListener('message', handleMsg);
                 };
             }, []);
 
             const toggleFullscreen = () => {
-                const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
+                const parentDoc = (window.parent && window.parent !== window) ? window.parent.document : null;
+                const isFs = !!(
+                    document.fullscreenElement || 
+                    document.webkitFullscreenElement ||
+                    (parentDoc && (parentDoc.fullscreenElement || parentDoc.webkitFullscreenElement))
+                );
+
+                const requestFs = (doc) => {
+                    const el = doc.documentElement;
+                    if (el.requestFullscreen) return el.requestFullscreen();
+                    if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+                    if (el.mozRequestFullScreen) return el.mozRequestFullScreen();
+                    if (el.msRequestFullscreen) return el.msRequestFullscreen();
+                };
+
+                const exitFs = (doc) => {
+                    if (doc.exitFullscreen) return doc.exitFullscreen();
+                    if (doc.webkitExitFullscreen) return doc.webkitExitFullscreen();
+                    if (doc.mozCancelFullScreen) return doc.mozCancelFullScreen();
+                    if (doc.msExitFullscreen) return doc.msExitFullscreen();
+                };
+
                 if (!isFs) {
-                    if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen().catch(() => {});
+                    let requested = false;
+                    if (parentDoc) {
+                        try {
+                            const p = requestFs(parentDoc);
+                            if (p && p.catch) {
+                                p.catch(() => {
+                                    try { requestFs(document); } catch (e) {}
+                                });
+                            }
+                            requested = true;
+                        } catch (e) {}
                     }
-                    try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
+                    if (!requested) {
+                        try { requestFs(document); } catch (e) {}
+                    }
+                    try { window.parent.postMessage({ type: "ENTER_FULLSCREEN" }, "*"); } catch(e) {}
                 } else {
-                    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-                    if (window.parent?.document?.exitFullscreen) window.parent.document.exitFullscreen().catch(() => {});
-                    try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
+                    if (parentDoc) {
+                        try { exitFs(parentDoc); } catch (e) {}
+                    }
+                    try { exitFs(document); } catch (e) {}
+                    try { window.parent.postMessage({ type: "EXIT_FULLSCREEN" }, "*"); } catch(e) {}
                 }
             };
             // iPad 兩指縮放手勢參照
