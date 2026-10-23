@@ -598,6 +598,35 @@
                 });
             };
 
+            // 導覽跳轉邏輯 (支援回首頁與跨關卡切換)
+            const handleNavigate = (val) => {
+                if (val === 'home') {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'NAVIGATE_HOME' }, '*');
+                    } else {
+                        window.location.href = '../index.html';
+                    }
+                } else if (val === 'quiz') {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 'quiz' }, '*');
+                    } else {
+                        window.location.href = '../index.html';
+                    }
+                } else if (val === 's1') {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's1' }, '*');
+                    } else {
+                        window.location.href = 'shape_comparison.html';
+                    }
+                } else if (val === 's3') {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's3' }, '*');
+                    } else {
+                        window.location.href = 'interactive_sphere.html';
+                    }
+                }
+            };
+
             return (
                 <div className="w-screen h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
                     {/* --- 頂部精簡導航與下拉選單工具列 (保留安全高度避開 iPad 狀態列) --- */}
@@ -676,7 +705,7 @@
                                         id="netTypeSelect"
                                     >
                                         {shapeType === 'prism' ? (
-                                            <>
+                                             <>
                                                 <option value="strip" className="bg-slate-800 text-white">鏈狀展開 (Strip)</option>
                                                 <option value="star" className="bg-slate-800 text-white">星形展開 (Star)</option>
                                             </>
@@ -712,6 +741,23 @@
                                     </select>
                                 </div>
                             )}
+                        </div>
+
+                        {/* 中間：關卡快速切換 / 回到首頁 下拉選單 */}
+                        <div className="flex items-center gap-1.5 bg-slate-800/95 border border-purple-500/60 rounded-xl px-3 py-1 shadow-md">
+                            <span className="text-xs text-amber-400 font-bold whitespace-nowrap">📍 關卡導覽:</span>
+                            <select
+                                value="s2"
+                                onChange={(e) => handleNavigate(e.target.value)}
+                                className="bg-transparent text-white font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                id="levelNavSelect"
+                            >
+                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 回到學習地圖 (首頁)</option>
+                                <option value="s1" className="bg-slate-800 text-white">第 1 關：認識柱體與錐體</option>
+                                <option value="s2" className="bg-slate-800 text-white font-bold">第 2 關：展開圖與組合 (目前)</option>
+                                <option value="s3" className="bg-slate-800 text-white">第 3 關：認識球</option>
+                                <option value="quiz" className="bg-slate-800 text-yellow-300">★ 總測驗挑戰</option>
+                            </select>
                         </div>
 
                         {/* 右側：檢核任務開關與視角切換 */}

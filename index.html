@@ -161,18 +161,6 @@
     .viewer { position: fixed; inset: 0; z-index: 80; background: #0f172a; display: none; }
     .viewer.show { display: block; }
     .viewer iframe { width: 100%; height: 100%; border: 0; background: #0f172a; }
-    .viewer-float-back {
-      position: fixed; right: 18px; bottom: 20px; z-index: 95;
-      display: flex; align-items: center; gap: 6px;
-      background: rgba(30, 27, 75, 0.92); color: #f8fafc;
-      border: 1.5px solid rgba(250, 204, 21, 0.4);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      padding: 9px 18px; border-radius: 999px; font-weight: 700; font-size: 0.88rem;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45); cursor: pointer;
-      transition: transform 0.15s, background 0.15s, border-color 0.15s;
-    }
-    .viewer-float-back:hover { background: #312e81; border-color: var(--c3); }
-    .viewer-float-back:active { transform: scale(0.92); }
 
     /* 測驗 */
     .quiz-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -239,13 +227,9 @@
     <div class="panel" id="panel"></div>
   </div>
 
-  <!-- 教具檢視器 (全螢幕功能整合於各教具功能列中，右下角提供直覺返回鈕) -->
+  <!-- 教具檢視器 (所有關卡切換與返回首頁選單整合於各教具頂部導覽列中) -->
   <div class="viewer" id="viewer">
     <iframe id="viewerFrame" title="互動教具" allow="fullscreen; accelerometer; gyroscope"></iframe>
-    <!-- 縮小後浮動在右下方的回到關卡按鈕 (iPad 手指操作極其直覺) -->
-    <button class="viewer-float-back" id="viewerBack" title="回到關卡地圖">
-      <span>←</span> 回到關卡
-    </button>
   </div>
 
   <script>
@@ -433,12 +417,12 @@
       $('viewer').classList.add('show');
       document.body.style.overflow = 'hidden';
     }
-    $('viewerBack').onclick = () => {
+    function closeViewer() {
       $('viewer').classList.remove('show');
       $('viewerFrame').src = 'about:blank';
       document.body.style.overflow = '';
       syncState();
-    };
+    }
 
     function syncState() {
       try {
@@ -452,7 +436,22 @@
     window.addEventListener('storage', syncState);
     window.addEventListener('message', (e) => {
       if (!e.data) return;
-      if (e.data.type === 'TOGGLE_FULLSCREEN') {
+      if (e.data.type === 'NAVIGATE_HOME') {
+        closeViewer();
+      } else if (e.data.type === 'NAVIGATE_STEP') {
+        const sid = e.data.stepId;
+        if (sid === 'home') {
+          closeViewer();
+        } else if (sid === 'quiz') {
+          closeViewer();
+          startQuiz();
+        } else {
+          const nextStep = STEPS.find(s => s.id === sid);
+          if (nextStep) {
+            openViewer(nextStep.page, nextStep.pageTitle);
+          }
+        }
+      } else if (e.data.type === 'TOGGLE_FULLSCREEN') {
         if (!document.fullscreenElement) {
           if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen().catch(() => {});
@@ -483,7 +482,7 @@
           const nextStep = STEPS[currentIdx + 1];
           openViewer(nextStep.page, nextStep.pageTitle);
         } else if (currentIdx === STEPS.length - 1) {
-          $('viewerBack').click();
+          closeViewer();
           startQuiz();
         }
       }
