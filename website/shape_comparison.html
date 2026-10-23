@@ -1240,7 +1240,7 @@
                                     </pattern>
                                 </defs>
                                 
-                                <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
+                                <g transform={`translate(${view.x}, ${view.y}) translate(${CX}, ${CY}) scale(${view.scale}) translate(${-CX}, ${-CY})`}>
                                     {/* 地板網格 */}
                                     <rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#grid)" />
                                     {renderAxes()}

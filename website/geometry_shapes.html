@@ -1242,7 +1242,7 @@
                                 </pattern>
                             </defs>
                             
-                            <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
+                            <g transform={`translate(${view.x}, ${view.y}) translate(400, 250) scale(${view.scale}) translate(-400, -250)`}>
                                 <rect x="-2000" y="-2000" width="4000" height="4000" fill="url(#grid)" />
                                 {renderPolygons()}
                             </g>
