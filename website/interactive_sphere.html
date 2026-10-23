@@ -87,6 +87,52 @@
 
         .lil-gui { display: none !important; }
 
+        /* 3D 空間標籤樣式 (高對比度、圓角微光標籤) */
+        .label {
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 8px;
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.15s ease;
+        }
+        .label-center {
+            background: rgba(245, 158, 11, 0.95);
+            color: #ffffff;
+            border: 1px solid #d97706;
+        }
+        .label-diameter {
+            background: rgba(239, 68, 68, 0.95);
+            color: #ffffff;
+            border: 1px solid #dc2626;
+        }
+        .label-section {
+            background: rgba(37, 99, 235, 0.95);
+            color: #ffffff;
+            border: 1px solid #1d4ed8;
+        }
+        .label-radius {
+            background: rgba(51, 65, 85, 0.92);
+            color: #ffffff;
+            border: 1px solid #1e293b;
+        }
+        .label-cap {
+            background: rgba(14, 165, 233, 0.95);
+            color: #ffffff;
+            border: 1px solid #0284c7;
+        }
+        .label-cap.highlight {
+            background: rgba(16, 185, 129, 0.96);
+            color: #ffffff;
+            border: 1px solid #059669;
+            font-size: 12px;
+        }
+
         /* 題目選項按鈕與回饋樣式 */
         .hud-options-grid {
             display: grid;
@@ -247,7 +293,7 @@
         let controls, viewHelper;
         let sphere, capMesh;
         let centerLabel, radiusLabel, capLabel, diameterLabel, sectionRadiusLabel;
-        let radiusLine, diameterLine, sectionRadiusLine;
+        let radiusLine, diameterLine, sectionRadiusLine, diameterOppositeHandle;
         let radiusHandle, sectionHandle; 
         let raycaster, pointer;
         let draggedObject = null; 
@@ -368,34 +414,42 @@
             scene.add(capMesh);
 
             // C. 球心 (Yellow/Orange)
-            const centerGeo = new THREE.SphereGeometry(0.15, 16, 16);
+            const centerGeo = new THREE.SphereGeometry(0.18, 16, 16);
             const centerMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
             const centerMesh = new THREE.Mesh(centerGeo, centerMat);
             scene.add(centerMesh);
             
-            // 指定類別: label-center
-            centerLabel = createLabel("球心 (Center)", new THREE.Vector3(0, -0.3, 0), "label-center");
+            // 指定類別: label-center，微往鏡頭前上方微調避免遮擋線條
+            centerLabel = createLabel("球心 (Center)", new THREE.Vector3(0, 0.35, 0.35), "label-center");
             scene.add(centerLabel);
 
-            // D. 直徑 (Red)
-            const diameterPoints = [new THREE.Vector3(-R, 0, 0), new THREE.Vector3(R, 0, 0)];
+            // D. 直徑 (呈現在最大圓切面 / 剖面上，穿過球心與半徑相連，直徑 = 半徑 × 2)
+            const diameterPoints = [new THREE.Vector3(0, -R, 0), new THREE.Vector3(0, R, 0)];
             const diameterGeo = new THREE.BufferGeometry().setFromPoints(diameterPoints);
             const diameterMat = new THREE.LineDashedMaterial({
-                color: 0xff3333,
-                dashSize: 0.5,
-                gapSize: 0.2,
-                linewidth: 2
+                color: 0xef4444,
+                dashSize: 0.35,
+                gapSize: 0.15,
+                linewidth: 3.5
             });
             diameterLine = new THREE.Line(diameterGeo, diameterMat);
             diameterLine.computeLineDistances();
+            diameterLine.renderOrder = 2;
             scene.add(diameterLine);
+
+            // 直徑反向端點節點 (與半徑端點藍點形成完整直徑的兩端)
+            const oppGeo = new THREE.SphereGeometry(0.24, 24, 24);
+            const oppMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x660000 });
+            diameterOppositeHandle = new THREE.Mesh(oppGeo, oppMat);
+            diameterOppositeHandle.position.set(0, -R, 0);
+            scene.add(diameterOppositeHandle);
             
-            // 指定類別: label-diameter
-            diameterLabel = createLabel("直徑 (Diameter) = 10", new THREE.Vector3(2.5, 0.2, 0), "label-diameter");
+            // 指定類別: label-diameter，放置在反向半徑的中點，直觀呈現兩倍關係
+            diameterLabel = createLabel(`直徑 (Diameter) = ${(2 * R).toFixed(1)} (半徑 × 2)`, new THREE.Vector3(0, -R / 2, 0), "label-diameter");
             scene.add(diameterLabel);
 
-            // E. 互動半徑 (球面紅色)
-            const initPos = new THREE.Vector3(-R * Math.cos(Math.PI/4), R * Math.sin(Math.PI/4), 0);
+            // E. 互動半徑 (球面紅色，置於左前側弧面上，避免與大圓剖面上的半徑/直徑標籤重疊)
+            const initPos = new THREE.Vector3(-0.85, -0.2, 0.48).normalize().multiplyScalar(R);
             
             // 1. 手柄
             const handleGeo = new THREE.SphereGeometry(0.3, 32, 32);
@@ -502,6 +556,16 @@
                 
                 capLabel.position.set(d, r + 0.5, 0);
 
+                if (isGreatCircle) {
+                    sectionRadiusLabel.element.innerHTML = `半徑 (Radius) = ${r.toFixed(1)}`;
+                } else {
+                    sectionRadiusLabel.element.innerHTML = `剖面半徑 (Section r) = ${r.toFixed(2)}`;
+                }
+                sectionRadiusLabel.position.set(d, newY / 2, newZ / 2);
+
+                // 同步連動直徑線：使其直接呈現在最大圓切面上，並與半徑相連 (直徑 = 半徑 × 2)
+                updateDiameterLineAndLabel(d, newY, newZ, r);
+
                 // 移除舊有特定樣式，根據大圓狀態套用新樣式
                 capLabel.element.classList.remove('highlight', 'label-cap');
                 
@@ -523,7 +587,43 @@
                 sectionRadiusLine.visible = false;
                 sectionRadiusLabel.visible = false;
                 sectionHandle.visible = false;
+                updateDiameterLineAndLabel(d, 0, 0, 0);
             }
+        }
+
+        // 動態更新直徑線、端點與標籤，確保直徑與半徑共線相連，立即可見 2 倍關係
+        function updateDiameterLineAndLabel(d, y, z, r) {
+            if (!diameterLine) return;
+            if (r <= 0.001) {
+                diameterLine.visible = false;
+                diameterLabel.visible = false;
+                if (diameterOppositeHandle) diameterOppositeHandle.visible = false;
+                return;
+            }
+            diameterLine.visible = true;
+            diameterLabel.visible = true;
+            if (diameterOppositeHandle) diameterOppositeHandle.visible = true;
+
+            // 直徑另一端點 (反向對稱點)
+            if (diameterOppositeHandle) {
+                diameterOppositeHandle.position.set(d, -y, -z);
+            }
+
+            // 更新直徑線頂點緩衝 (從 -y,-z 穿過 (d,0,0) 至 y,z)
+            const pos = diameterLine.geometry.attributes.position.array;
+            pos[0] = d; pos[1] = -y; pos[2] = -z;
+            pos[3] = d; pos[4] = y; pos[5] = z;
+            diameterLine.geometry.attributes.position.needsUpdate = true;
+            diameterLine.computeLineDistances();
+
+            const isGreat = Math.abs(d) < 0.1;
+            if (isGreat) {
+                diameterLabel.element.innerHTML = `直徑 (Diameter) = ${(2 * R).toFixed(1)} (半徑 × 2)`;
+            } else {
+                diameterLabel.element.innerHTML = `剖面直徑 = ${(2 * r).toFixed(2)}`;
+            }
+            // 將直徑標籤精準放在反向半徑中點，清楚看出兩段半徑構成一條直徑
+            diameterLabel.position.set(d, -y / 2, -z / 2);
         }
 
         function updateRadiusLineAndLabel() {
@@ -648,6 +748,7 @@
                         sectionRadiusLine.geometry.attributes.position.needsUpdate = true;
                         
                         sectionRadiusLabel.position.set(state.clipPosition, target.y/2, target.z/2);
+                        updateDiameterLineAndLabel(state.clipPosition, target.y, target.z, state.sectionRadius);
                     }
                 }
             }
