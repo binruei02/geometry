@@ -1,0 +1,3 @@
+# Exclude Chinese teaching material folder
+教材/
+.DS_Store
