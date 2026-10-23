@@ -53,10 +53,9 @@
             margin: 0; 
         }
     </style>
-</head>
-<body class="bg-slate-100 min-h-screen p-2 md:p-4 flex flex-col items-center">
+<body class="bg-slate-950 w-screen h-screen overflow-hidden flex flex-col font-sans select-none">
 
-    <div id="root" class="w-full max-w-7xl"></div>
+    <div id="root" class="w-full h-full flex flex-col"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
@@ -218,7 +217,7 @@
                     ]);
                     setSelectedShapeId(newId);
                     setUserRotation({ x: 28 * (Math.PI / 180), y: 35 * (Math.PI / 180) });
-                    setView({ x: -110, y: 0, scale: 1 });
+                    setView({ x: 0, y: 0, scale: 1 });
                 } else if (step === 1) {
                     // 任務 2：錐體底面 (四角錐，置於左側可視區中央)
                     const newId = 102;
@@ -227,7 +226,7 @@
                     ]);
                     setSelectedShapeId(newId);
                     setUserRotation({ x: 25 * (Math.PI / 180), y: 40 * (Math.PI / 180) });
-                    setView({ x: -110, y: 0, scale: 1 });
+                    setView({ x: 0, y: 0, scale: 1 });
                 } else if (step === 2) {
                     // 任務 3：五角柱與五角錐頂點邊數 (並列於左側開闊區域，避開右側 HUD 卡片遮擋)
                     const id1 = 103;
@@ -238,7 +237,7 @@
                     ]);
                     setSelectedShapeId(id1);
                     setUserRotation({ x: 22 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
-                    setView({ x: -160, y: 0, scale: 0.95 });
+                    setView({ x: 0, y: 0, scale: 1 });
                 } else if (step === 3) {
                     // 任務 4：表面特性（圓柱與圓錐，並列於左側開闊區域）
                     const id1 = 105;
@@ -249,7 +248,7 @@
                     ]);
                     setSelectedShapeId(id1);
                     setUserRotation({ x: 20 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
-                    setView({ x: -160, y: 0, scale: 0.95 });
+                    setView({ x: 0, y: 0, scale: 1 });
                 }
             };
 
@@ -736,610 +735,557 @@
             };
 
             return (
-                <div className="flex flex-col md:flex-row gap-4 w-full h-[90vh]">
-                    
-                    {/* 左側：控制面板 */}
-                    <div className="w-full md:w-80 bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden border border-slate-200 order-2 md:order-1">
-                        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                            <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
-                                <IconSettings /> 參數控制 (Parameters)
-                            </h2>
-                            <button onClick={resetView} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded" title="重置視角 (Reset View)">
-                                <IconRefresh />
-                            </button>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
-                            {selectedShape ? (
-                                <>
-                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold text-blue-600 uppercase">當前選擇 (Selected)</span>
-                                            <div className="flex gap-1">
-                                                <button onClick={duplicateShape} className="text-blue-500 hover:text-blue-700 p-1 bg-white rounded shadow-sm border border-slate-100" title="複製 (Copy)">
-                                                    <IconCopy />
-                                                </button>
-                                                <button onClick={(e) => removeShape(selectedShape.id, e)} className="text-red-400 hover:text-red-600 p-1 bg-white rounded shadow-sm border border-slate-100" title="刪除 (Delete)">
-                                                    <IconTrash />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="text-xl font-black text-slate-800 capitalize mb-1">{SHAPE_NAMES[selectedShape.type]}</div>
-                                    </div>
+                <div className="w-full h-full flex flex-col bg-slate-950 overflow-hidden font-sans select-none">
+                    {/* --- 頂部固定工具列 --- */}
+                    <header className="bg-slate-900 border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-white z-30 shrink-0">
+                        {/* 左側：形體新增快速選單與當前選中形體 */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-slate-400">新增形體：</span>
+                            <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg border border-slate-700">
+                                <button onClick={() => addShape("prism")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增角柱">
+                                    + 角柱
+                                </button>
+                                <button onClick={() => addShape("pyramid")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增角錐">
+                                    + 角錐
+                                </button>
+                                <button onClick={() => addShape("cylinder")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增圓柱">
+                                    + 圓柱
+                                </button>
+                                <button onClick={() => addShape("cone")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增圓錐">
+                                    + 圓錐
+                                </button>
+                                <button onClick={() => addShape("sphere")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增球體">
+                                    + 球體
+                                </button>
+                            </div>
 
-                                    <div className="space-y-4">
-                                        {/* 位置座標 (Position Control) - 移除 Math.round，允許輸入小數 */}
-                                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                            <label className="flex items-center gap-2 text-sm font-bold text-amber-800 mb-2">
-                                                <IconMovePlanar /> 位置座標 (Position - cm)
-                                            </label>
-                                            <div className="grid grid-cols-3 gap-2 mb-2">
-                                                <div>
-                                                    <span className="text-[10px] text-amber-600 block font-bold">X (左右/Horiz)</span>
-                                                    <input 
-                                                        type="number" 
-                                                        step="0.5"
-                                                        value={selectedShape.x} 
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            if (val === '') return; // 允許清空
-                                                            updateSelectedShape('x', parseFloat(val));
-                                                        }} 
-                                                        className="w-full text-sm p-1 border border-amber-200 rounded focus:border-amber-500 outline-none text-center" 
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <span className="text-[10px] text-amber-600 block font-bold">Y (離地/Elev)</span>
-                                                    <input 
-                                                        type="number" 
-                                                        step="0.5"
-                                                        value={selectedShape.y} 
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            if (val === '') return;
-                                                            updateSelectedShape('y', Math.max(0, parseFloat(val)));
-                                                        }} 
-                                                        className="w-full text-sm p-1 border border-amber-200 rounded focus:border-amber-500 outline-none text-center" 
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <span className="text-[10px] text-amber-600 block font-bold">Z (前後/Depth)</span>
-                                                    <input 
-                                                        type="number" 
-                                                        step="0.5"
-                                                        value={selectedShape.z} 
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            if (val === '') return;
-                                                            updateSelectedShape('z', parseFloat(val));
-                                                        }} 
-                                                        className="w-full text-sm p-1 border border-amber-200 rounded focus:border-amber-500 outline-none text-center" 
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="pt-2 border-t border-amber-200/50">
-                                                <div className="flex justify-between text-xs text-amber-700 mb-1">
-                                                    <span>快速調整高度 (Quick Height)</span>
-                                                </div>
-                                                <input type="range" min="0" max="100" step="1" value={selectedShape.y} 
-                                                    onChange={(e) => updateSelectedShape('y', parseInt(e.target.value))} 
-                                                    className="w-full h-2 bg-white rounded-lg appearance-none cursor-pointer accent-amber-500" />
-                                            </div>
-                                        </div>
-
-                                        {/* 顏色選擇器 (Color Palette) */}
-                                        <div>
-                                            <label className="flex items-center gap-2 text-sm font-bold text-slate-600 mb-2">
-                                                <IconPalette /> 外觀顏色 (Color)
-                                            </label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {PASTEL_COLORS.map((color) => (
-                                                    <button
-                                                        key={color.hue}
-                                                        onClick={() => updateSelectedShape('colorHue', color.hue)}
-                                                        className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${selectedShape.colorHue === color.hue ? 'border-slate-500 scale-110 shadow-md' : 'border-transparent'}`}
-                                                        style={{ backgroundColor: color.bg }}
-                                                        title={color.name}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t border-slate-200 my-2"></div>
-
-                                        {selectedShape.type !== 'sphere' && selectedShape.type !== 'cone' && selectedShape.type !== 'cylinder' && (
-                                            <div>
-                                                <label className="flex justify-between text-sm font-bold text-slate-600 mb-1">
-                                                    底面邊數 (Sides) <span className="text-blue-600">{selectedShape.sides}</span>
-                                                </label>
-                                                <input type="range" min="3" max="12" value={selectedShape.sides} 
-                                                    onChange={(e) => updateSelectedShape('sides', parseInt(e.target.value))} 
-                                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                                            </div>
-                                        )}
-
-                                        <div>
-                                            <label className="flex justify-between text-sm font-bold text-slate-600 mb-1">
-                                                {(selectedShape.type === 'sphere' || selectedShape.type === 'cylinder' || selectedShape.type === 'cone') 
-                                                    ? '底面半徑 (Radius - cm)' 
-                                                    : '底面邊長 (Side Length - cm)'} 
-                                                <span className="text-blue-600">{selectedShape.baseSize} cm</span>
-                                            </label>
-                                            <input type="range" min="1" max="50" value={selectedShape.baseSize} 
-                                                onChange={(e) => updateSelectedShape('baseSize', parseInt(e.target.value))} 
-                                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                                        </div>
-
-                                        {selectedShape.type !== 'sphere' && (
-                                            <div>
-                                                <label className="flex justify-between text-sm font-bold text-slate-600 mb-1">
-                                                    高度 (Height - cm) <span className="text-blue-600">{selectedShape.height} cm</span>
-                                                </label>
-                                                <input type="range" min="1" max="100" value={selectedShape.height} 
-                                                    onChange={(e) => updateSelectedShape('height', parseInt(e.target.value))} 
-                                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="text-center text-slate-400 py-10">
-                                    <p>請點擊場景中的物體<br/>Click on an object to edit</p>
+                            {selectedShape && (
+                                <div className="hidden sm:flex items-center gap-1.5 bg-indigo-950/80 border border-indigo-700 px-2.5 py-1 rounded-lg text-xs text-indigo-200">
+                                    <span className="font-bold text-white">{SHAPE_NAMES[selectedShape.type]}</span>
+                                    <button onClick={duplicateShape} className="hover:text-white text-indigo-300 p-0.5" title="複製此形體">
+                                        <IconCopy />
+                                    </button>
+                                    <button onClick={(e) => removeShape(selectedShape.id, e)} className="hover:text-rose-400 text-rose-300 p-0.5" title="刪除此形體">
+                                        <IconTrash />
+                                    </button>
                                 </div>
                             )}
-                            
-                            {/* 場景物件清單 */}
-                            <div className="pt-4 border-t border-slate-200">
-                                <h3 className="text-sm font-bold text-slate-600 mb-2 flex items-center gap-2"><IconList /> 物件清單 (Object List)</h3>
-                                <div className="space-y-1">
-                                    {shapes.map((shape, index) => {
-                                        // Find color object
-                                        const colorObj = PASTEL_COLORS.find(c => c.hue === shape.colorHue) || PASTEL_COLORS[6];
-                                        return (
-                                            <div 
-                                                key={shape.id}
-                                                onClick={() => { setSelectedShapeId(shape.id); setInteractionMode('moveItem'); }}
-                                                className={`flex items-center justify-between p-2 rounded cursor-pointer text-xs transition-colors ${selectedShapeId === shape.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50 border border-transparent'}`}
+                        </div>
+
+                        {/* 右側：模式切換、重置視角、檢核開關、全螢幕 */}
+                        <div className="flex items-center gap-2">
+                            <div className="hidden md:flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-xs">
+                                <button 
+                                    onClick={() => setInteractionMode("moveItem")}
+                                    className={`px-2 py-1 font-bold transition-colors ${interactionMode === "moveItem" ? "bg-amber-600 text-white" : "text-slate-400 hover:text-white"}`}
+                                    title="水平移動"
+                                >
+                                    移動
+                                </button>
+                                <button 
+                                    onClick={() => setInteractionMode("rotate")}
+                                    className={`px-2 py-1 font-bold transition-colors ${interactionMode === "rotate" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
+                                    title="旋轉視角"
+                                >
+                                    旋轉
+                                </button>
+                                <button 
+                                    onClick={() => setInteractionMode("pan")}
+                                    className={`px-2 py-1 font-bold transition-colors ${interactionMode === "pan" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
+                                    title="平移視角"
+                                >
+                                    平移
+                                </button>
+                            </div>
+                            <button 
+                                onClick={resetView} 
+                                className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                                title="重置為最佳視角"
+                            >
+                                重置視角
+                            </button>
+
+                            {/* 頂部檢核任務切換按鈕 */}
+                            <button 
+                                onClick={() => setQuizOpen(!quizOpen)} 
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ${quizOpen ? "bg-purple-600 text-white ring-2 ring-purple-300" : "bg-purple-700/80 text-purple-100 hover:bg-purple-600"}`}
+                                id="toggleQuizBtn"
+                            >
+                                <span>🎯 檢核任務 (題 {quizStep + 1}/4)</span>
+                                <span>{quizOpen ? "▲ 收合" : "▼ 展開"}</span>
+                            </button>
+
+                            {/* 全螢幕切換按鈕 */}
+                            <button 
+                                onClick={() => {
+                                    if (!document.fullscreenElement) {
+                                        document.documentElement.requestFullscreen().catch(() => {});
+                                    } else {
+                                        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                                    }
+                                }} 
+                                className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-bold transition-colors"
+                                title="全螢幕檢視"
+                                id="btnFullscreen"
+                            >
+                                ⛶
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* --- 頂部折疊式檢核任務面板 (HUD) --- */}
+                    {quizOpen && (
+                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-indigo-500 px-4 py-3 z-20 shrink-0 max-h-[48vh] overflow-y-auto animate-fadeIn">
+                            <div className="max-w-4xl mx-auto">
+                                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-indigo-100">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="bg-indigo-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold shadow-sm">第 1 關檢核</span>
+                                        <span className="text-xs text-indigo-700 font-bold">邊操作邊回答：題 {quizStep + 1} / 4</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                        {[
+                                            { step: 0, label: "1. 柱體底面" },
+                                            { step: 1, label: "2. 錐體底面" },
+                                            { step: 2, label: "3. 頂點與邊" },
+                                            { step: 3, label: "4. 表面特性" }
+                                        ].map((t) => (
+                                            <button
+                                                key={t.step}
+                                                onClick={() => { setupShapesForStep(t.step); setQuizOpen(true); }}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${quizStep === t.step ? "bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300" : "bg-slate-100 text-slate-600 hover:bg-indigo-50 border border-slate-200"}`}
                                             >
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 rounded-full border border-slate-300" style={{ backgroundColor: colorObj.bg }}></div>
-                                                    <span className="font-bold text-slate-700">{SHAPE_NAMES[shape.type]} {index + 1}</span>
-                                                    <span className="text-slate-400 scale-90">({Math.round(shape.x)}, {Math.round(shape.y)}, {Math.round(shape.z)})</span>
-                                                </div>
-                                                <button 
-                                                    onClick={(e) => removeShape(shape.id, e)}
-                                                    className="text-slate-400 hover:text-red-500 p-1"
-                                                    title="刪除 (Delete)"
-                                                >
-                                                    <IconTrash />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
+                                                {t.label}
+                                            </button>
+                                        ))}
+                                        <button 
+                                            onClick={() => setQuizOpen(false)} 
+                                            className="ml-2 text-slate-400 hover:text-slate-600 text-xs px-2 py-0.5 rounded border border-slate-200"
+                                        >
+                                            隱藏題目 ▲
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="p-4 bg-slate-50 border-t border-slate-200 grid grid-cols-3 gap-2">
-                             <button onClick={() => addShape('prism')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
-                                <IconCube /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">角柱<br/>(Prism)</span>
-                             </button>
-                             <button onClick={() => addShape('pyramid')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
-                                <IconPyramid /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">角錐<br/>(Pyramid)</span>
-                             </button>
-                             <button onClick={() => addShape('cylinder')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
-                                <IconCylinder /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">圓柱<br/>(Cylinder)</span>
-                             </button>
-                             <button onClick={() => addShape('cone')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
-                                <IconCone /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">圓錐<br/>(Cone)</span>
-                             </button>
-                             <button onClick={() => addShape('sphere')} className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
-                                <IconSphere /> <span className="text-[10px] font-bold mt-1 text-slate-600 text-center">球體<br/>(Sphere)</span>
-                             </button>
-                        </div>
-                    </div>
+                                {/* 題目與選項內容 */}
+                                {quizStep === 0 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 1：柱體的「底面」有幾個？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            請旋轉 3D 柱體視角，直接在形體上點選它的<b>「兩個底面」</b>！
+                                        </p>
+                                        <div className="text-[11px] text-amber-800 bg-amber-50/90 border border-amber-200 rounded-lg p-2 leading-relaxed">
+                                            💡 <b>iPad 貼心操作：</b> 點擊畫面最下方的<b>【👀 看上底】</b>與<b>【👀 看下底】</b>按鈕，柱體會自動翻轉，輕點即可選取！
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes("top") ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-slate-100 text-slate-500 border-slate-200"}`}>
+                                                {clickedBases.includes("top") ? "✓ 上底面 (已選取)" : "○ 上底面 (待點選)"}
+                                            </span>
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes("bottom") ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-slate-100 text-slate-500 border-slate-200"}`}>
+                                                {clickedBases.includes("bottom") ? "✓ 下底面 (已選取)" : "○ 下底面 (待點選)"}
+                                            </span>
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? "bg-green-50 text-green-800 border border-green-200" : "bg-rose-50 text-rose-800 border border-rose-200"}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {clickedBases.length >= 2 && (
+                                            <button 
+                                                onClick={() => setupShapesForStep(1)}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                            >
+                                                答對了！前往第 2 題 (錐體底面) →
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
 
-                    {/* 右側：3D 畫布 */}
-                    <div className="flex-1 bg-white rounded-2xl shadow-xl relative overflow-hidden flex flex-col order-1 md:order-2">
-                        
-                        <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
-                            <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 text-xs font-bold text-slate-600 pointer-events-auto">
-                                物件 (Objects): {shapes.length}
-                            </div>
+                                {quizStep === 1 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 2：錐體的「底面」有幾個？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            畫面上已切換為<b>四角錐</b>。請點選底下的【👀 看下底】或旋轉視角，在 3D 角錐上點選它的<b>「底面」</b>！
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes("bottom") ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-slate-100 text-slate-500 border-slate-200"}`}>
+                                                {clickedBases.includes("bottom") ? "✓ 底面 (只有 1 個)" : "○ 底面 (待點選)"}
+                                            </span>
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? "bg-green-50 text-green-800 border border-green-200" : "bg-rose-50 text-rose-800 border border-rose-200"}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {clickedBases.includes("bottom") && (
+                                            <button 
+                                                onClick={() => setupShapesForStep(2)}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                            >
+                                                前往第 3 題 (頂點與邊計算) →
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
 
-                            <div className="flex gap-2 pointer-events-auto bg-white/90 backdrop-blur p-1 rounded-lg shadow-sm border border-slate-200">
-                                <button 
-                                    onClick={() => setInteractionMode('moveItem')}
-                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'moveItem' ? 'bg-amber-100 text-amber-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
-                                    title="水平移動 (Move XZ)"
-                                >
-                                    <IconMovePlanar /> 移動 (Move)
-                                </button>
-                                <button 
-                                    onClick={() => setInteractionMode('liftItem')}
-                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'liftItem' ? 'bg-purple-100 text-purple-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
-                                    title="垂直升降 (Lift Y)"
-                                >
-                                    <IconMoveVertical /> 垂直 (Lift)
-                                </button>
-                                <div className="w-px bg-slate-200 mx-1"></div>
-                                <button 
-                                    onClick={() => setInteractionMode('rotate')}
-                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'rotate' ? 'bg-blue-100 text-blue-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
-                                    title="旋轉視角 (Rotate View)"
-                                >
-                                    <IconRotate3D /> 旋轉 (Rotate)
-                                </button>
-                                <button 
-                                    onClick={() => setInteractionMode('pan')}
-                                    className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded transition-colors ${interactionMode === 'pan' ? 'bg-blue-100 text-blue-700 shadow-inner' : 'hover:bg-slate-50 text-slate-600'}`}
-                                    title="平移視角 (Pan View)"
-                                >
-                                    <IconPan /> 平移 (Pan)
-                                </button>
-                            </div>
-                        </div>
-
-                        <svg 
-                            ref={svgRef}
-                            viewBox="0 0 800 600" 
-                            className={`w-full h-full bg-slate-50 touch-none ${cursorClass}`}
-                            onMouseDown={handleMouseDown}
-                            onMouseMove={handleMouseMove}
-                            onMouseUp={handleMouseUp}
-                            onMouseLeave={handleMouseUp}
-                            onWheel={handleWheel}
-                            onTouchStart={handleTouchStart}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleMouseUp}
-                        >
-                            <defs>
-                                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" strokeWidth="1"/>
-                                </pattern>
-                            </defs>
-                            
-                            <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
-                                {/* 地板網格 */}
-                                <rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#grid)" />
-                                {renderAxes()}
-                                
-                                {/* 渲染場景 */}
-                                {renderScene()}
-
-                                {/* 形體上方浮動名稱標籤 (讓學生在觀察對比時能一眼認出形體名稱) */}
-                                {shapes.map((s) => {
-                                    const pt = project3D(s.x * UNIT_SCALE, -(s.y * UNIT_SCALE + s.height * UNIT_SCALE + 20), s.z * UNIT_SCALE);
-                                    let label = '';
-                                    if (s.type === 'prism') label = `${s.sides === 3 ? '三角柱' : s.sides === 4 ? '四角柱' : s.sides === 5 ? '五角柱' : s.sides + '角柱'}`;
-                                    else if (s.type === 'pyramid') label = `${s.sides === 3 ? '三角錐' : s.sides === 4 ? '四角錐' : s.sides === 5 ? '五角錐' : s.sides + '角錐'}`;
-                                    else if (s.type === 'cylinder') label = '圓柱';
-                                    else if (s.type === 'cone') label = '圓錐';
-                                    else if (s.type === 'sphere') label = '球體';
-
-                                    return (
-                                        <g key={`lbl-${s.id}`} className="pointer-events-none select-none">
-                                            <rect x={pt.x - 30} y={pt.y - 11} width="60" height="22" rx="11" fill="rgba(30, 41, 59, 0.88)" stroke="#818cf8" strokeWidth="1.5" />
-                                            <text x={pt.x} y={pt.y} fill="#ffffff" fontSize="11" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                                {label}
-                                            </text>
-                                        </g>
-                                    );
-                                })}
-                            </g>
-                        </svg>
-
-                        {/* --- 國小五下數學：立體圖形互動小檢核 (頂部可隱藏/展開模式) --- */}
-                        <div className="absolute top-3 left-3 right-3 z-20 flex flex-col items-center pointer-events-none">
-                            <div className="pointer-events-auto w-full max-w-2xl bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border-2 border-indigo-200 overflow-hidden transition-all duration-200">
-                                {/* 頂部固定條：題號、收合/展開按鈕 */}
-                                <div className="flex items-center justify-between px-3 py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 flex-wrap gap-2">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="bg-indigo-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold shadow-sm">🎯 檢核任務</span>
-                                        <div className="flex gap-1">
+                                {quizStep === 2 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 3：角柱與角錐的頂點和邊數量
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            畫面上已自動並列<b>「左：五角柱」</b>與<b>「右：五角錐」</b>！請數一數五角柱有幾條邊？五角錐有幾個頂點？
+                                        </p>
+                                        <div className="space-y-1.5">
                                             {[
-                                                { step: 0, label: '題 1：柱體底面' },
-                                                { step: 1, label: '題 2：錐體底面' },
-                                                { step: 2, label: '題 3：頂點與邊' },
-                                                { step: 3, label: '題 4：表面特性' }
-                                            ].map((t) => (
+                                                { text: "五角柱有 15 條邊 (3n)；五角錐有 6 個頂點 (n+1)", right: true },
+                                                { text: "五角柱有 10 條邊；五角錐有 5 個頂點", right: false },
+                                                { text: "五角柱有 12 條邊；五角錐有 10 個頂點", right: false }
+                                            ].map((item, i) => (
                                                 <button
-                                                    key={t.step}
-                                                    onClick={() => { setupShapesForStep(t.step); setQuizOpen(true); }}
-                                                    className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${quizStep === t.step ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white/90 text-slate-600 hover:bg-indigo-100 border border-slate-200'}`}
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (item.right) {
+                                                            setQuizFeedback({ ok: true, msg: "完全正確！n 角柱的邊 = 3n (5×3=15條)；n 角錐的頂點 = n+1 (5+1=6個，底面5個+錐頂1個)！" });
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: "再算算看！角柱邊數是 3n，角錐頂點是 n+1 喔！" });
+                                                        }
+                                                    }}
+                                                    className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 text-left transition-colors"
                                                 >
-                                                    {t.label}
+                                                    {item.text}
                                                 </button>
                                             ))}
                                         </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? "bg-green-50 text-green-800 border border-green-200" : "bg-rose-50 text-rose-800 border border-rose-200"}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {quizFeedback && quizFeedback.ok && (
+                                            <button 
+                                                onClick={() => setupShapesForStep(3)}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                            >
+                                                前往第 4 題 (立體表面特性) →
+                                            </button>
+                                        )}
                                     </div>
-                                    <button 
-                                        onClick={() => setQuizOpen(!quizOpen)} 
-                                        className="text-xs font-bold px-2.5 py-1 rounded-lg border border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50 active:scale-95 shadow-sm transition-all flex items-center gap-1"
-                                    >
-                                        {quizOpen ? '收合題目 ▲' : '展開題目與選項 ▼'}
-                                    </button>
-                                </div>
+                                )}
 
-                                {/* 展開時的題目與選項內容 */}
-                                {quizOpen && (
-                                    <div className="p-3.5 max-h-[45vh] overflow-y-auto space-y-3">
-                                        {/* 題 1：柱體底面點選 */}
-                                        {quizStep === 0 && (
-                                            <div className="space-y-2">
-                                                <div className="text-sm font-bold text-slate-800">
-                                                    🎯 任務 1：柱體的「底面」有幾個？
-                                                </div>
-                                                <p className="text-xs text-slate-600 leading-relaxed">
-                                                    請旋轉 3D 柱體視角，直接在形體上點選它的<b>「兩個底面」</b>！
-                                                </p>
-                                                <div className="text-[11px] text-amber-800 bg-amber-50/90 border border-amber-200 rounded-lg p-2 leading-relaxed">
-                                                    💡 <b>iPad 貼心操作：</b> 點擊畫面最下方的<b>【👀 看上底】</b>與<b>【👀 看下底】</b>按鈕，柱體會自動翻轉，輕點即可選取！
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes('top') ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                        {clickedBases.includes('top') ? '✓ 上底面 (已選取)' : '○ 上底面 (待點選)'}
-                                                    </span>
-                                                    <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes('bottom') ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                        {clickedBases.includes('bottom') ? '✓ 下底面 (已選取)' : '○ 下底面 (待點選)'}
-                                                    </span>
-                                                </div>
-                                                {quizFeedback && (
-                                                    <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                        {quizFeedback.msg}
-                                                    </div>
-                                                )}
-                                                {clickedBases.length >= 2 && (
-                                                    <button 
-                                                        onClick={() => setupShapesForStep(1)}
-                                                        className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                    >
-                                                        答對了！前往第 2 題 (錐體底面) →
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* 題 2：錐體底面點選 */}
-                                        {quizStep === 1 && (
-                                            <div className="space-y-2">
-                                                <div className="text-sm font-bold text-slate-800">
-                                                    🎯 任務 2：錐體的「底面」有幾個？
-                                                </div>
-                                                <p className="text-xs text-slate-600 leading-relaxed">
-                                                    畫面上已切換為<b>四角錐</b>。請點選底下的【👀 看下底】或旋轉視角，在 3D 角錐上點選它的<b>「底面」</b>！
-                                                </p>
-                                                <div className="flex gap-2">
-                                                    <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 border ${clickedBases.includes('bottom') ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                        {clickedBases.includes('bottom') ? '✓ 底面 (只有 1 個)' : '○ 底面 (待點選)'}
-                                                    </span>
-                                                </div>
-                                                {quizFeedback && (
-                                                    <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                        {quizFeedback.msg}
-                                                    </div>
-                                                )}
-                                                {clickedBases.includes('bottom') && (
-                                                    <button 
-                                                        onClick={() => setupShapesForStep(2)}
-                                                        className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                    >
-                                                        前往第 3 題 (頂點與邊計算) →
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* 題 3：頂點與邊數量公式 */}
-                                        {quizStep === 2 && (
-                                            <div className="space-y-2">
-                                                <div className="text-sm font-bold text-slate-800">
-                                                    🎯 任務 3：角柱與角錐的頂點和邊數量
-                                                </div>
-                                                <p className="text-xs text-slate-600 leading-relaxed">
-                                                    畫面上已自動並列<b>「左：五角柱」</b>與<b>「右：五角錐」</b>！請數一數五角柱有幾條邊？五角錐有幾個頂點？
-                                                </p>
-                                                <div className="space-y-1.5">
-                                                    {[
-                                                        { text: '五角柱有 15 條邊 (3n)；五角錐有 6 個頂點 (n+1)', right: true },
-                                                        { text: '五角柱有 10 條邊；五角錐有 5 個頂點', right: false },
-                                                        { text: '五角柱有 12 條邊；五角錐有 10 個頂點', right: false }
-                                                    ].map((item, i) => (
-                                                        <button
-                                                            key={i}
-                                                            onClick={() => {
-                                                                if (item.right) {
-                                                                    setQuizFeedback({ ok: true, msg: '完全正確！n 角柱的邊 = 3n (5×3=15條)；n 角錐的頂點 = n+1 (5+1=6個，底面5個+錐頂1個)！' });
-                                                                } else {
-                                                                    setQuizFeedback({ ok: false, msg: '再算算看！角柱邊數是 3n，角錐頂點是 n+1 喔！' });
-                                                                }
-                                                            }}
-                                                            className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 text-left"
-                                                        >
-                                                            {item.text}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                {quizFeedback && (
-                                                    <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                        {quizFeedback.msg}
-                                                    </div>
-                                                )}
-                                                {quizFeedback && quizFeedback.ok && (
-                                                    <button 
-                                                        onClick={() => setupShapesForStep(3)}
-                                                        className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                    >
-                                                        前往第 4 題 (立體表面特性) →
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* 題 4：表面特性 */}
-                                        {quizStep === 3 && (
-                                            <div className="space-y-2">
-                                                <div className="text-sm font-bold text-slate-800">
-                                                    🎯 任務 4：形體的立體表面有什麼不同？
-                                                </div>
-                                                <p className="text-xs text-slate-600 leading-relaxed">
-                                                    畫面上已並列<b>「圓柱」</b>與<b>「圓錐」</b>。角柱/角錐與圓柱/圓錐的表面有什麼根本不同？
-                                                </p>
-                                                <div className="space-y-1.5">
-                                                    {[
-                                                        { text: '角柱/角錐全部由「多邊形平面」組成；圓柱/圓錐側面則是圓滑的「曲面」，無稜邊可滾動', right: true },
-                                                        { text: '圓柱和圓錐全部都是由三角形平面組成的', right: false },
-                                                        { text: '角柱和角錐都沒有頂點', right: false }
-                                                    ].map((item, i) => (
-                                                        <button
-                                                            key={i}
-                                                            onClick={() => {
-                                                                if (item.right) {
-                                                                    setQuizFeedback({ ok: true, msg: '太棒了！角柱角錐都是由平面多邊形構成；圓柱圓錐的側面則是曲面！（側面展開形狀與特性請前往下一關！）' });
-                                                                    setQuizCompleted(true);
-                                                                    try {
-                                                                        if (window.parent) {
-                                                                            window.parent.postMessage({ type: 'STEP_COMPLETED', stepId: 's1' }, '*');
-                                                                        }
-                                                                        const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
-                                                                        if (!p.done.includes('s1')) {
-                                                                            p.done.push('s1');
-                                                                            localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
-                                                                        }
-                                                                    } catch(e) {}
-                                                                } else {
-                                                                    setQuizFeedback({ ok: false, msg: '再想想看，角柱角錐是多邊形平面，圓柱圓錐側面摸起來圓圓的彎曲表面是曲面喔！' });
-                                                                }
-                                                            }}
-                                                            className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 text-left"
-                                                        >
-                                                            {item.text}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                {quizFeedback && (
-                                                    <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                        {quizFeedback.msg}
-                                                    </div>
-                                                )}
-                                                {quizCompleted && (
-                                                    <div className="pt-2">
-                                                        <div className="bg-amber-100 text-amber-900 p-2.5 rounded-xl text-xs font-bold text-center mb-2">
-                                                            🎉 恭喜完成第 1 關立體形體檢核！
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => {
+                                {quizStep === 3 && (
+                                    <div className="space-y-2">
+                                        <div className="text-sm font-bold text-slate-800">
+                                            🎯 任務 4：形體的立體表面有什麼不同？
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            畫面上已並列<b>「圓柱」</b>與<b>「圓錐」</b>。角柱/角錐與圓柱/圓錐的表面有什麼根本不同？
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {[
+                                                { text: "角柱/角錐全部由「多邊形平面」組成；圓柱/圓錐側面則是圓滑的「曲面」，無稜邊可滾動", right: true },
+                                                { text: "圓柱和圓錐全部都是由三角形平面組成的", right: false },
+                                                { text: "角柱和角錐都沒有頂點", right: false }
+                                            ].map((item, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (item.right) {
+                                                            setQuizFeedback({ ok: true, msg: "太棒了！角柱角錐都是由平面多邊形構成；圓柱圓錐的側面則是曲面！（側面展開形狀與特性請前往下一關！）" });
+                                                            setQuizCompleted(true);
+                                                            try {
                                                                 if (window.parent) {
-                                                                    window.parent.postMessage({ type: 'GO_NEXT_STEP', currentStepId: 's1' }, '*');
+                                                                    window.parent.postMessage({ type: "STEP_COMPLETED", stepId: "s1" }, "*");
                                                                 }
-                                                            }}
-                                                            className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                        >
-                                                            🚀 前往第 2 關：展開圖與組合 →
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                                const p = JSON.parse(localStorage.getItem("geo5-progress-v1") || "{"done":[],"best":null}");
+                                                                if (!p.done.includes("s1")) {
+                                                                    p.done.push("s1");
+                                                                    localStorage.setItem("geo5-progress-v1", JSON.stringify(p));
+                                                                }
+                                                            } catch(e) {}
+                                                        } else {
+                                                            setQuizFeedback({ ok: false, msg: "再想想看，角柱角錐是多邊形平面，圓柱圓錐側面摸起來圓圓的彎曲表面是曲面喔！" });
+                                                        }
+                                                    }}
+                                                    className="w-full p-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 text-left transition-colors"
+                                                >
+                                                    {item.text}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {quizFeedback && (
+                                            <div className={`p-2 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? "bg-green-50 text-green-800 border border-green-200" : "bg-rose-50 text-rose-800 border border-rose-200"}`}>
+                                                {quizFeedback.msg}
+                                            </div>
+                                        )}
+                                        {quizCompleted && (
+                                            <div className="pt-2">
+                                                <div className="bg-amber-100 text-amber-900 p-2.5 rounded-xl text-xs font-bold text-center mb-2">
+                                                    🎉 恭喜完成第 1 關立體形體檢核！
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (window.parent) {
+                                                            window.parent.postMessage({ type: "GO_NEXT_STEP", currentStepId: "s1" }, "*");
+                                                        }
+                                                    }}
+                                                    className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
+                                                >
+                                                    🚀 前往第 2 關：展開圖與組合 →
+                                                </button>
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
                         </div>
+                    )}
 
-                        {/* --- iPad / 觸控專屬直覺操作列 (Touch-Friendly Controls) --- */}
-                        <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-                            {/* 視角翻轉與旋轉快捷鍵 */}
-                            <div className="pointer-events-auto flex items-center flex-wrap gap-1.5 bg-white/95 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl border border-slate-200">
-                                <span className="text-[11px] font-bold text-slate-500 mr-1 hidden sm:inline">視角切換：</span>
-                                <button
-                                    onClick={() => setCameraPreset('top')}
-                                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition-all"
-                                    title="一鍵俯視，清楚點選上底面"
-                                >
-                                    <span>👀 看上底</span>
-                                </button>
-                                <button
-                                    onClick={() => setCameraPreset('bottom')}
-                                    className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition-all"
-                                    title="一鍵仰視，清楚點選下底面"
-                                >
-                                    <span>👀 看下底</span>
-                                </button>
-                                <button
-                                    onClick={() => setCameraPreset('left')}
-                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition-all"
-                                    title="向左轉 30 度"
-                                >
-                                    <span>↺ 左轉</span>
-                                </button>
-                                <button
-                                    onClick={() => setCameraPreset('right')}
-                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition-all"
-                                    title="向右轉 30 度"
-                                >
-                                    <span>↻ 右轉</span>
-                                </button>
-                                <button
-                                    onClick={() => setAutoRotate(prev => !prev)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 ${autoRotate ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 animate-pulse' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'}`}
-                                    title="形體自動緩慢自轉"
-                                >
-                                    <span>{autoRotate ? '⏸️ 停止自轉' : '▶️ 自動自轉'}</span>
-                                </button>
-                                <button
-                                    onClick={() => setCameraPreset('reset')}
-                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 rounded-xl text-xs font-medium border border-slate-200 transition-all"
-                                    title="重置為標準 3D 視角"
-                                >
-                                    <span>↺ 重置視角</span>
-                                </button>
+                    {/* --- 主畫面：左側精簡參數控制 + 右側 100% 3D 畫布 --- */}
+                    <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+                        {/* 左側：精簡參數面板 */}
+                        <div className="w-full md:w-72 bg-white/95 backdrop-blur-md border-r border-slate-200 flex flex-col overflow-y-auto p-3 text-xs shrink-0 order-2 md:order-1 max-h-[35vh] md:max-h-full">
+                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                                    <IconSettings /> 幾何參數控制
+                                </span>
+                                <span className="text-[11px] text-slate-400">物件: {shapes.length} 個</span>
                             </div>
 
-                            {/* 形體位置微調快捷鍵 */}
-                            <div className="pointer-events-auto flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl border border-slate-200">
-                                <span className="text-[11px] font-bold text-slate-500 mr-1 hidden sm:inline">位置微調：</span>
-                                <button
-                                    onClick={() => nudgeShape(-20, 0, 0)}
-                                    className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg text-xs font-bold border border-slate-200"
-                                    title="向左移"
-                                >
-                                    ←
-                                </button>
-                                <button
-                                    onClick={() => nudgeShape(20, 0, 0)}
-                                    className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg text-xs font-bold border border-slate-200"
-                                    title="向右移"
-                                >
-                                    →
-                                </button>
-                                <button
-                                    onClick={() => nudgeShape(0, 20, 0)}
-                                    className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg text-xs font-bold border border-slate-200"
-                                    title="向上升高"
-                                >
-                                    ↑
-                                </button>
-                                <button
-                                    onClick={() => nudgeShape(0, -20, 0)}
-                                    className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg text-xs font-bold border border-slate-200"
-                                    title="向下降低"
-                                >
-                                    ↓
-                                </button>
-                                <button
-                                    onClick={resetShapePos}
-                                    className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 active:scale-95 rounded-lg text-xs font-bold border border-purple-200 ml-1"
-                                    title="讓物件回歸中間原點 (0,0)"
-                                >
-                                    🎯 置中
-                                </button>
+                            {selectedShape ? (
+                                <div className="space-y-3.5 flex-1">
+                                    <div className="bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-indigo-500 uppercase block">當前選取形體</span>
+                                            <span className="text-sm font-black text-slate-800">{SHAPE_NAMES[selectedShape.type]}</span>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button onClick={duplicateShape} className="p-1 bg-white hover:bg-indigo-100 text-indigo-600 rounded border border-indigo-200 shadow-sm" title="複製形體">
+                                                <IconCopy />
+                                            </button>
+                                            <button onClick={(e) => removeShape(selectedShape.id, e)} className="p-1 bg-white hover:bg-rose-100 text-rose-600 rounded border border-rose-200 shadow-sm" title="刪除形體">
+                                                <IconTrash />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 邊數 (角柱 / 角錐) */}
+                                    {selectedShape.type !== "sphere" && selectedShape.type !== "cone" && selectedShape.type !== "cylinder" && (
+                                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                                            <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                                <span>底面邊數 (Sides)</span>
+                                                <span className="text-indigo-600 font-extrabold">{selectedShape.sides} 邊形</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="3" max="10" value={selectedShape.sides} 
+                                                onChange={(e) => updateSelectedShape("sides", parseInt(e.target.value))} 
+                                                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* 底面大小 / 半徑 */}
+                                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                                        <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                            <span>{(selectedShape.type === "sphere" || selectedShape.type === "cylinder" || selectedShape.type === "cone") ? "半徑 (Radius)" : "底面邊長 (Length)"}</span>
+                                            <span className="text-indigo-600 font-extrabold">{selectedShape.baseSize} cm</span>
+                                        </div>
+                                        <input 
+                                            type="range" min="2" max="25" value={selectedShape.baseSize} 
+                                            onChange={(e) => updateSelectedShape("baseSize", parseInt(e.target.value))} 
+                                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+                                        />
+                                    </div>
+
+                                    {/* 高度 (非球體) */}
+                                    {selectedShape.type !== "sphere" && (
+                                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                                            <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                                <span>形體高度 (Height)</span>
+                                                <span className="text-indigo-600 font-extrabold">{selectedShape.height} cm</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="3" max="30" value={selectedShape.height} 
+                                                onChange={(e) => updateSelectedShape("height", parseInt(e.target.value))} 
+                                                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* 外觀顏色 */}
+                                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                                        <div className="font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                                            <IconPalette /> 外觀粉彩色調
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {PASTEL_COLORS.map((color) => (
+                                                <button
+                                                    key={color.hue}
+                                                    onClick={() => updateSelectedShape("colorHue", color.hue)}
+                                                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${selectedShape.colorHue === color.hue ? "border-indigo-600 scale-110 shadow-md ring-2 ring-indigo-200" : "border-white"}`}
+                                                    style={{ backgroundColor: color.bg }}
+                                                    title={color.name}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 位置座標快速滑桿與置中 */}
+                                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-bold text-slate-700">水平位置 (X: {Math.round(selectedShape.x)})</span>
+                                            <button onClick={resetShapePos} className="text-[10px] text-indigo-600 bg-white px-1.5 py-0.5 rounded border border-indigo-200 hover:bg-indigo-50 font-bold">
+                                                置中 (0,0)
+                                            </button>
+                                        </div>
+                                        <input 
+                                            type="range" min="-30" max="30" value={selectedShape.x} 
+                                            onChange={(e) => updateSelectedShape("x", parseFloat(e.target.value))} 
+                                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center p-4 text-center text-slate-400">
+                                    <span className="text-2xl mb-1">👆</span>
+                                    <p className="font-bold text-slate-600">輕點形體進行微調</p>
+                                    <p className="text-[11px] text-slate-400 mt-1">在 3D 空間中點選任一立體圖形即可調整其邊長、高度與外觀顏色！</p>
+                                </div>
+                            )}
+
+                            {/* 物件快速列表 */}
+                            <div className="pt-2 border-t border-slate-200 shrink-0">
+                                <span className="font-bold text-[11px] text-slate-500 mb-1 block">場景形體列表：</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {shapes.map((s, idx) => (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => { setSelectedShapeId(s.id); setInteractionMode("moveItem"); }}
+                                            className={`px-2 py-0.5 rounded text-[11px] font-bold border transition-colors ${selectedShapeId === s.id ? "bg-indigo-600 text-white border-indigo-600" : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"}`}
+                                        >
+                                            {SHAPE_NAMES[s.type]} {idx + 1}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 右側：3D 畫布與底部觸控輔助 */}
+                        <div className="flex-1 relative bg-slate-900 overflow-hidden flex flex-col order-1 md:order-2">
+                            <svg 
+                                ref={svgRef}
+                                viewBox="0 0 800 600" 
+                                className={`w-full h-full bg-gradient-to-b from-slate-900 to-slate-950 touch-none ${cursorClass}`}
+                                onMouseDown={handleMouseDown}
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={handleMouseUp}
+                                onMouseLeave={handleMouseUp}
+                                onWheel={handleWheel}
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleMouseUp}
+                            >
+                                <defs>
+                                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#334155" strokeWidth="0.8"/>
+                                    </pattern>
+                                </defs>
+                                
+                                <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
+                                    {/* 地板網格 */}
+                                    <rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#grid)" />
+                                    {renderAxes()}
+                                    
+                                    {/* 渲染場景 */}
+                                    {renderScene()}
+
+                                    {/* 形體上方浮動名稱標籤 */}
+                                    {shapes.map((s) => {
+                                        const pt = project3D(s.x * UNIT_SCALE, -(s.y * UNIT_SCALE + s.height * UNIT_SCALE + 20), s.z * UNIT_SCALE);
+                                        let label = "";
+                                        if (s.type === "prism") label = `${s.sides === 3 ? "三角柱" : s.sides === 4 ? "四角柱" : s.sides === 5 ? "五角柱" : s.sides + "角柱"}`;
+                                        else if (s.type === "pyramid") label = `${s.sides === 3 ? "三角錐" : s.sides === 4 ? "四角錐" : s.sides === 5 ? "五角錐" : s.sides + "角錐"}`;
+                                        else if (s.type === "cylinder") label = "圓柱";
+                                        else if (s.type === "cone") label = "圓錐";
+                                        else if (s.type === "sphere") label = "球體";
+
+                                        return (
+                                            <g key={`lbl-${s.id}`} className="pointer-events-none select-none">
+                                                <rect x={pt.x - 32} y={pt.y - 12} width="64" height="24" rx="12" fill="rgba(15, 23, 42, 0.9)" stroke="#6366f1" strokeWidth="1.5" />
+                                                <text x={pt.x} y={pt.y} fill="#ffffff" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                                    {label}
+                                                </text>
+                                            </g>
+                                        );
+                                    })}
+                                </g>
+                            </svg>
+
+                            {/* --- iPad 專屬直覺操作列 (置底浮動卡片，絕不擋住形體) --- */}
+                            <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+                                <div className="pointer-events-auto flex items-center flex-wrap gap-1.5 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl border border-slate-700 text-white">
+                                    <span className="text-[11px] font-bold text-slate-400 mr-1 hidden sm:inline">視角切換：</span>
+                                    <button
+                                        onClick={() => setCameraPreset("top")}
+                                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition-all"
+                                        title="一鍵俯視，清楚點選上底面"
+                                    >
+                                        👀 看上底
+                                    </button>
+                                    <button
+                                        onClick={() => setCameraPreset("bottom")}
+                                        className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition-all"
+                                        title="一鍵仰視，清楚點選下底面"
+                                    >
+                                        👀 看下底
+                                    </button>
+                                    <button
+                                        onClick={() => setCameraPreset("left")}
+                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all"
+                                        title="向左轉 30 度"
+                                    >
+                                        ↺ 左轉
+                                    </button>
+                                    <button
+                                        onClick={() => setCameraPreset("right")}
+                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all"
+                                        title="向右轉 30 度"
+                                    >
+                                        ↻ 右轉
+                                    </button>
+                                    <button
+                                        onClick={() => setAutoRotate(prev => !prev)}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 ${autoRotate ? "bg-indigo-600 text-white ring-2 ring-indigo-300 animate-pulse" : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"}`}
+                                        title="形體自動緩慢自轉"
+                                    >
+                                        {autoRotate ? "⏸️ 停止自轉" : "▶️ 自動自轉"}
+                                    </button>
+                                    <button
+                                        onClick={() => setCameraPreset("reset")}
+                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 transition-all"
+                                        title="重置為標準 3D 視角"
+                                    >
+                                        ↺ 重置視角
+                                    </button>
+                                </div>
+
+                                {/* 形體位置微調快捷鍵 */}
+                                <div className="pointer-events-auto flex items-center gap-1 bg-slate-900/90 backdrop-blur-md px-2.5 py-2 rounded-2xl shadow-xl border border-slate-700 text-white">
+                                    <span className="text-[11px] font-bold text-slate-400 mr-1 hidden sm:inline">微調：</span>
+                                    <button onClick={() => nudgeShape(-15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向左移">←</button>
+                                    <button onClick={() => nudgeShape(15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向右移">→</button>
+                                    <button onClick={() => nudgeShape(0, 15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向上升">↑</button>
+                                    <button onClick={() => nudgeShape(0, -15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向下降">↓</button>
+                                    <button onClick={resetShapePos} className="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 active:scale-95 rounded-lg text-xs font-bold border border-indigo-700 ml-1" title="讓物件回歸中間 (0,0)">🎯 置中</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
-            );
-        };
+            );        };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<GeometryLab />);

@@ -734,6 +734,22 @@
                                 <span>📝 檢核任務 (題 {quizStep + 1}/5)</span>
                                 <span>{quizOpen ? '▲ 收合' : '▼ 展開'}</span>
                             </button>
+
+                            {/* 全螢幕切換按鈕 */}
+                            <button 
+                                onClick={() => {
+                                    if (!document.fullscreenElement) {
+                                        document.documentElement.requestFullscreen().catch(() => {});
+                                    } else {
+                                        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                                    }
+                                }} 
+                                className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-bold transition-colors"
+                                title="全螢幕檢視"
+                                id="btnFullscreen"
+                            >
+                                ⛶
+                            </button>
                         </div>
                     </header>
 
@@ -1049,25 +1065,94 @@
                             {animationProgress < 0.05 ? '📄 2D 平面展開圖' : animationProgress > 0.95 ? '🧊 3D 立體模型' : '🔄 組合摺疊中...'}
                         </div>
 
-                        {/* 拓撲連接點快速微調 (當處於 2D 展開圖且有自訂連接點時浮動在左下方) */}
-                        {animationProgress < 0.2 && ((shapeType === 'prism' && prismNetType === 'strip') || shapeType === 'cylinder') && (
-                            <div className="absolute top-12 left-3 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-xl p-2 text-xs text-slate-300 shadow-xl max-w-xs hidden sm:block">
-                                <div className="font-bold text-amber-300 mb-1">底面拓撲連接點</div>
-                                <div className="flex gap-2">
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-[10px] text-amber-200">上:</span>
-                                        <button onClick={() => setTopBasePosition(p => Math.max(0, p-1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">◀</button>
-                                        <span className="font-bold text-amber-400">{topBasePosition + 1}</span>
-                                        <button onClick={() => setTopBasePosition(p => Math.min(renderSides-1, p+1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">▶</button>
+                        {/* 拓撲連接點快速微調 (依照上下分成兩排呈現，按鈕大幅放大以利 iPad 觸控) */}
+                        {animationProgress < 0.2 && (
+                            <>
+                                {((shapeType === 'prism' && prismNetType === 'strip') || shapeType === 'cylinder') && (
+                                    <div className="absolute top-14 left-3 z-10 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 text-xs text-slate-200 shadow-2xl max-w-sm">
+                                        <div className="font-bold text-amber-300 mb-2 flex items-center gap-1.5 text-xs">
+                                            <span>✨ 底面拓撲位置調整</span>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            {/* 第一排：上底連接點 */}
+                                            <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
+                                                <span className="text-xs font-bold text-yellow-300 whitespace-nowrap pl-1">上底:</span>
+                                                <div className="flex items-center gap-1.5 flex-1 justify-end">
+                                                    <button 
+                                                        onClick={() => setTopBasePosition(p => Math.max(0, p-1))} 
+                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-amber-600 rounded-lg font-bold text-sm text-yellow-200 border border-slate-600 shadow"
+                                                        aria-label="上底前移"
+                                                    >
+                                                        ◀
+                                                    </button>
+                                                    <span className="font-bold text-amber-300 text-sm px-2 text-center min-w-[50px]">
+                                                        側邊 {topBasePosition + 1}
+                                                    </span>
+                                                    <button 
+                                                        onClick={() => setTopBasePosition(p => Math.min(renderSides-1, p+1))} 
+                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-amber-600 rounded-lg font-bold text-sm text-yellow-200 border border-slate-600 shadow"
+                                                        aria-label="上底後移"
+                                                    >
+                                                        ▶
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* 第二排：下底連接點 */}
+                                            <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
+                                                <span className="text-xs font-bold text-orange-300 whitespace-nowrap pl-1">下底:</span>
+                                                <div className="flex items-center gap-1.5 flex-1 justify-end">
+                                                    <button 
+                                                        onClick={() => setBottomBasePosition(p => Math.max(0, p-1))} 
+                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-orange-600 rounded-lg font-bold text-sm text-orange-200 border border-slate-600 shadow"
+                                                        aria-label="下底前移"
+                                                    >
+                                                        ◀
+                                                    </button>
+                                                    <span className="font-bold text-orange-300 text-sm px-2 text-center min-w-[50px]">
+                                                        側邊 {bottomBasePosition + 1}
+                                                    </span>
+                                                    <button 
+                                                        onClick={() => setBottomBasePosition(p => Math.min(renderSides-1, p+1))} 
+                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-orange-600 rounded-lg font-bold text-sm text-orange-200 border border-slate-600 shadow"
+                                                        aria-label="下底後移"
+                                                    >
+                                                        ▶
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-[10px] text-orange-200">下:</span>
-                                        <button onClick={() => setBottomBasePosition(p => Math.max(0, p-1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">◀</button>
-                                        <span className="font-bold text-orange-400">{bottomBasePosition + 1}</span>
-                                        <button onClick={() => setBottomBasePosition(p => Math.min(renderSides-1, p+1))} className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600">▶</button>
+                                )}
+
+                                {((shapeType === 'pyramid' && pyramidNetType === 'chain') || shapeType === 'cone') && (
+                                    <div className="absolute top-14 left-3 z-10 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 text-xs text-slate-200 shadow-2xl max-w-xs">
+                                        <div className="font-bold text-pink-300 mb-2 flex items-center gap-1.5 text-xs">
+                                            <span>✨ 底面拓撲位置調整</span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
+                                            <span className="text-xs font-bold text-pink-300 whitespace-nowrap pl-1">底面:</span>
+                                            <div className="flex items-center gap-1.5 flex-1 justify-end">
+                                                <button 
+                                                    onClick={() => setPyramidBasePosition(p => Math.max(0, p-1))} 
+                                                    className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-pink-600 rounded-lg font-bold text-sm text-pink-200 border border-slate-600 shadow"
+                                                >
+                                                    ◀
+                                                </button>
+                                                <span className="font-bold text-pink-300 text-sm px-2 text-center min-w-[50px]">
+                                                    側邊 {pyramidBasePosition + 1}
+                                                </span>
+                                                <button 
+                                                    onClick={() => setPyramidBasePosition(p => Math.min(renderSides-1, p+1))} 
+                                                    className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-pink-600 rounded-lg font-bold text-sm text-pink-200 border border-slate-600 shadow"
+                                                >
+                                                    ▶
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                )}
+                            </>
                         )}
 
                         {/* SVG 展開圖/立體畫布 */}
@@ -1094,49 +1179,56 @@
                             </g>
                         </svg>
 
-                        {/* --- 浮動於展示頁面底部的動畫控制列 (專為 iPad 與觸控設計) --- */}
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl flex flex-col gap-2">
-                            {/* 上排：播放/暫停按鈕、重置按鈕、2D/3D 快選鈕、進度百分比 */}
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                    <button 
-                                        onClick={startAnimation} 
-                                        className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-white font-bold text-xs md:text-sm transition-all shadow-md active:scale-95 ${isAnimating ? 'bg-amber-500 hover:bg-amber-600' : 'bg-purple-600 hover:bg-purple-700'}`}
-                                        id="btnPlayAnimation"
-                                    >
-                                        {isAnimating ? <><IconPause /> 暫停</> : <><IconPlay /> 動畫播放</>}
-                                    </button>
-                                    <button 
-                                        onClick={resetAnimation} 
-                                        className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl transition-all font-bold active:scale-95"
-                                        title="重置為展開狀態"
-                                    >
-                                        <IconRotateCcw />
-                                    </button>
-                                </div>
-
-                                <div className="flex items-center gap-1.5">
+                        {/* --- 浮動於展示頁面「右側」的動畫控制列 (不遮擋中央幾何圖形，極利 iPad 單手觸控) --- */}
+                        <div className="absolute right-4 bottom-5 z-20 w-64 md:w-72 bg-slate-900/92 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl flex flex-col gap-3">
+                            {/* 頂部資訊與快選切換 */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                                    <span>🎬 動畫進度:</span>
+                                    <span className="font-mono text-purple-400 font-extrabold text-sm">
+                                        {Math.round(animationProgress * 100)}%
+                                    </span>
+                                </span>
+                                <div className="flex items-center gap-1">
                                     <button 
                                         onClick={() => { setIsAnimating(false); setAnimationProgress(0); }} 
-                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${animationProgress === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${animationProgress === 0 ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
                                     >
-                                        📄 2D 展開
+                                        2D
                                     </button>
                                     <button 
                                         onClick={() => { setIsAnimating(false); setAnimationProgress(1); }} 
-                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${animationProgress === 1 ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${animationProgress === 1 ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
                                     >
-                                        🧊 3D 立體
+                                        3D
                                     </button>
-                                    <span className="text-xs font-mono font-bold text-purple-300 min-w-[3rem] text-right">
-                                        {Math.round(animationProgress * 100)}%
-                                    </span>
                                 </div>
                             </div>
 
-                            {/* 下排：順滑拖曳進度滑桿 */}
-                            <div className="flex items-center gap-2 pt-1">
-                                <span className="text-[11px] text-slate-400 font-bold whitespace-nowrap hidden sm:inline">2D 展開</span>
+                            {/* 主播放/暫停按鈕 */}
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={startAnimation} 
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm transition-all shadow-lg active:scale-95 ${isAnimating ? 'bg-amber-500 hover:bg-amber-600' : 'bg-purple-600 hover:bg-purple-700'}`}
+                                    id="btnPlayAnimation"
+                                >
+                                    {isAnimating ? <><IconPause /> 暫停動畫</> : <><IconPlay /> 動畫播放</>}
+                                </button>
+                                <button 
+                                    onClick={resetAnimation} 
+                                    className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl transition-all font-bold active:scale-95"
+                                    title="重置為展開狀態"
+                                >
+                                    <IconRotateCcw />
+                                </button>
+                            </div>
+
+                            {/* 順滑展開進度滑桿 */}
+                            <div className="flex flex-col gap-1 pt-1 border-t border-slate-800">
+                                <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                                    <span>2D 平面</span>
+                                    <span>3D 立體</span>
+                                </div>
                                 <input 
                                     type="range" 
                                     min="0" 
@@ -1147,10 +1239,9 @@
                                         setAnimationProgress(parseFloat(e.target.value)); 
                                         setIsAnimating(false); 
                                     }} 
-                                    className="w-full h-2.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500" 
+                                    className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500" 
                                     id="animationSlider"
                                 />
-                                <span className="text-[11px] text-slate-400 font-bold whitespace-nowrap hidden sm:inline">3D 立體</span>
                             </div>
                         </div>
                     </main>

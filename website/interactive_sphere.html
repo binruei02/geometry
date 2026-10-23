@@ -13,124 +13,31 @@
             touch-action: none; /* 防止手機瀏覽器的預設滑動行為 */
         }
 
-        #info {
-            position: absolute;
-            top: 20px;
-            width: 100%;
-            text-align: center;
-            color: #333;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
-        }
-
-        p {
-            margin: 5px 0 0;
-            font-size: 0.9rem;
-            color: #555;
-            background: rgba(255,255,255,0.6);
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            line-height: 1.5;
-        }
-
-        /* CSS2D Label Styles - Base */
-        .label {
-            color: #fff;
-            font-family: sans-serif;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 14px;
-            pointer-events: none;
-            white-space: nowrap;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            transition: background 0.3s, transform 0.2s;
-            text-align: center;
-            font-weight: 500;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-
-        /* Color-coded Labels */
-        .label-center {
-            background: rgba(230, 140, 0, 0.85); /* 橘黃色 (對應球心) */
-        }
-
-        .label-diameter {
-            background: rgba(220, 50, 50, 0.85); /* 紅色 (對應直徑) */
-        }
-
-        .label-radius {
-            background: rgba(180, 0, 0, 0.85); /* 深紅色 (對應球體半徑) */
-        }
-
-        .label-section {
-            background: rgba(0, 0, 200, 0.85); /* 藍色 (對應剖面半徑) */
-        }
         
-        .label-cap {
-            background: rgba(70, 160, 220, 0.85); /* 淡藍色 (對應普通剖面) */
-        }
-
-        /* Special States */
-        .label.highlight {
-            background: rgba(0, 180, 0, 0.9); /* 鮮綠色 (大圓) */
-            font-weight: bold;
-            font-size: 16px;
-            box-shadow: 0 0 15px rgba(0,255,0,0.4);
-            border: 2px solid rgba(255,255,255,0.8);
-        }
-
-        .label.warning {
-            background: rgba(255, 0, 0, 0.95); /* 拖曳時的高亮紅 */
-            transform: scale(1.1);
-        }
-        
-        .label.blue-highlight {
-            background: rgba(0, 0, 255, 0.95); /* 拖曳時的高亮藍 */
-            transform: scale(1.1);
-        }
-
-        /* Loading Overlay */
-        #loading {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 999;
-            transition: opacity 0.5s;
-        }
-
         /* 觸控友善的滑動條容器 */
         #slider-container {
             position: absolute;
-            bottom: 30px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 80%;
-            max-width: 600px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 520px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 10px 18px;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+            border: 1px solid rgba(226, 232, 240, 0.8);
             z-index: 20;
             text-align: center;
         }
 
         #slider-label {
             display: block;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-            color: #333;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: #334155;
             font-weight: bold;
         }
 
@@ -140,67 +47,38 @@
             width: 100%;
             background: transparent;
         }
-
-        input[type=range]:focus {
-            outline: none;
-        }
-
-        /* 滑軌 */
+        input[type=range]:focus { outline: none; }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 8px;
+            height: 6px;
             cursor: pointer;
-            background: #ddd;
+            background: #cbd5e1;
             border-radius: 4px;
         }
-        
-        /* 滑塊 (Thumb) - 加大以利觸控 */
         input[type=range]::-webkit-slider-thumb {
-            height: 30px;
-            width: 30px;
+            height: 26px;
+            width: 26px;
             border-radius: 50%;
-            background: #4285f4;
+            background: #0284c7;
             cursor: pointer;
             -webkit-appearance: none;
-            margin-top: -11px; /* 置中 */
+            margin-top: -10px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
             border: 2px solid white;
         }
-
         input[type=range]::-moz-range-thumb {
-            height: 30px;
-            width: 30px;
+            height: 26px;
+            width: 26px;
             border-radius: 50%;
-            background: #4285f4;
+            background: #0284c7;
             cursor: pointer;
             border: 2px solid white;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
 
-        /* 隱藏預設的 lil-gui (右上角面板) */
-        .lil-gui { 
-            display: none !important; 
-        }
+        .lil-gui { display: none !important; }
 
-        /* 國小五下：球體小檢核 HUD 樣式 */
-        #sphere-quiz-hud {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 320px;
-            max-width: calc(100vw - 40px);
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 2px solid #38bdf8;
-            border-radius: 18px;
-            padding: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            z-index: 100;
-            font-family: inherit;
-        }
-        #sphere-quiz-hud h3 { margin: 0 0 6px; font-size: 1rem; color: #0369a1; }
-        #sphere-quiz-hud p { margin: 0 0 10px; font-size: 0.85rem; color: #475569; background: none; padding: 0; line-height: 1.5; }
+        /* 題目選項按鈕與回饋樣式 */
         .hud-btn {
             display: block;
             width: 100%;
@@ -230,31 +108,15 @@
         .hud-next {
             margin-top: 10px;
             width: 100%;
-            padding: 10px;
-            background: linear-gradient(90deg, #0284c7, #2563eb);
+            padding: 9px;
+            background: linear-gradient(90deg, #7c3aed, #4f46e5);
             color: white;
             border: none;
             border-radius: 12px;
             font-weight: bold;
             font-size: 0.85rem;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(37,99,235,0.25);
-        }
-        #hud-toggle-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: #0284c7;
-            color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            cursor: pointer;
-            z-index: 99;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: none;
+            box-shadow: 0 4px 10px rgba(124,58,237,0.25);
         }
     </style>
 </head>
@@ -262,30 +124,78 @@
 
     <div id="loading">載入 3D 引擎中...<br>Loading 3D Engine...</div>
     
-    <div id="info">
-        <h1>球體幾何特性互動教學<br><span style="font-size: 1rem; font-weight: normal;">Interactive Sphere Geometry</span></h1>
-        <p>
-            拖曳 <span style="color:red; font-weight:bold;">紅點 (Red Dot)</span> 移動球體半徑 (Radius)<br>
-            拖曳 <span style="color:blue; font-weight:bold;">藍點 (Blue Dot)</span> 移動剖面半徑 (Section Radius)
-        </p>
+    <!-- 頂部固定導航列 (節省版面，含全螢幕與檢核切換) -->
+    <header id="sphere-topbar" style="position:fixed; top:0; left:0; width:100%; height:46px; background:rgba(15, 23, 42, 0.94); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-bottom:1px solid rgba(51, 65, 85, 0.8); display:flex; justify-content:space-between; align-items:center; padding:0 12px; box-sizing:border-box; z-index:100; color:white; font-family:sans-serif;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-weight:bold; font-size:13px; color:#e2e8f0; display:flex; align-items:center; gap:6px;">
+                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#38bdf8;"></span>
+                球體幾何特性互動觀察
+            </span>
+            <button id="btn-reset-view" style="padding:4px 10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:11px; font-weight:bold; border-radius:6px; cursor:pointer;" title="重置視角">
+                ↺ 重置視角
+            </button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button id="hud-toggle-btn" style="background:#7c3aed; color:white; border:none; padding:5px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(124,58,237,0.4);">
+                <span>🎯 檢核任務 (<span id="top-step-num">題 1/3</span>)</span>
+                <span id="top-toggle-text">▼ 展開</span>
+            </button>
+            <button id="btn-fullscreen" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155; padding:4px 8px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;" title="全螢幕檢視">
+                ⛶
+            </button>
+        </div>
+    </header>
+
+    <!-- 頂部折疊式檢核任務面板 (HUD) -->
+    <div id="sphere-quiz-hud" style="position:fixed; top:46px; left:0; width:100%; max-height:48vh; overflow-y:auto; background:rgba(255, 255, 255, 0.98); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:2px solid #8b5cf6; padding:12px 16px; box-shadow:0 12px 30px rgba(0,0,0,0.2); z-index:90; box-sizing:border-box; display:none;">
+        <div style="max-width:800px; margin:0 auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #ede9fe; flex-wrap:wrap; gap:6px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="background:#7c3aed; color:white; font-size:11px; padding:2px 8px; border-radius:99px; font-weight:bold;">第 3 關檢核</span>
+                    <span style="font-size:12px; color:#6d28d9; font-weight:bold;">邊操作邊回答：<span id="hud-step-indicator">題 1 / 3</span></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <div style="display:flex; gap:4px;">
+                        <button class="step-nav-btn" data-step="0" style="padding:2px 8px; font-size:11px; font-weight:bold; border-radius:6px; border:1px solid #cbd5e1; background:#7c3aed; color:white; cursor:pointer;">1. 球心半徑</button>
+                        <button class="step-nav-btn" data-step="1" style="padding:2px 8px; font-size:11px; font-weight:bold; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; cursor:pointer;">2. 平面切面</button>
+                        <button class="step-nav-btn" data-step="2" style="padding:2px 8px; font-size:11px; font-weight:bold; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; cursor:pointer;">3. 最大大圓</button>
+                    </div>
+                    <button id="hud-close-btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:6px;">▲ 收合題目</button>
+                </div>
+            </div>
+            <div id="hud-content"></div>
+        </div>
+    </div>
+
+    <!-- 左側操作與特性浮動說明卡片 (避免擋住中央 3D 球體) -->
+    <div id="sphere-side-info" style="position:fixed; top:58px; left:16px; width:220px; background:rgba(255, 255, 255, 0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:14px; border:1px solid rgba(226, 232, 240, 0.9); box-shadow:0 8px 24px rgba(0,0,0,0.1); padding:12px; z-index:20; font-size:12px; color:#334155; line-height:1.5; pointer-events:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:bold; color:#0f172a; border-bottom:1px solid #f1f5f9; padding-bottom:4px;">
+            <span>💡 操作與幾何特性</span>
+            <button id="btn-collapse-info" style="border:none; background:none; color:#94a3b8; cursor:pointer; font-size:11px;">收合 ▲</button>
+        </div>
+        <div id="side-info-body">
+            <div style="margin-bottom:8px;">
+                <b style="color:#0284c7;">🎯 互動手勢：</b><br>
+                • 拖曳 <span style="color:#ef4444; font-weight:bold;">● 紅點</span>：調整球半徑<br>
+                • 拖曳 <span style="color:#3b82f6; font-weight:bold;">● 藍點</span>：旋轉切面半徑<br>
+                • 單指滑動：360° 旋轉視角<br>
+                • 雙指撥動：縮放畫面
+            </div>
+            <div style="border-top:1px dashed #e2e8f0; padding-top:6px;">
+                <b style="color:#0284c7;">📐 球體特性：</b><br>
+                • 球心到球面每一點距離都<b>相等</b>（半徑）<br>
+                • <b>直徑 = 2 × 半徑</b><br>
+                • 任何平面切過球體，切面皆為<b>圓形</b><br>
+                • 通過球心的切面最大，稱為<b>大圓</b>
+            </div>
+        </div>
     </div>
 
     <!-- 底部觸控滑動條 -->
     <div id="slider-container">
-        <label id="slider-label" for="clip-slider">移動切割面 (Move Cut Position)</label>
+        <label id="slider-label" for="clip-slider">移動切割面位置 (Move Cut Position)</label>
         <input type="range" id="clip-slider" min="-5" max="5" step="0.01" value="0">
     </div>
-
-    <!-- 國小五下：球體小檢核 HUD -->
-    <div id="sphere-quiz-hud">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="background:#0284c7; color:white; font-size:11px; padding:2px 8px; border-radius:99px; font-weight:bold;">球體小檢核</span>
-            <span id="hud-step-indicator" style="font-size:12px; color:#0369a1; font-weight:bold;">題 1 / 3</span>
-            <button id="hud-close-btn" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:12px;">✕ 收合</button>
-        </div>
-        <div id="hud-content"></div>
-    </div>
-    <button id="hud-toggle-btn">✏️ 打開小檢核任務</button>
 
     <!-- Import Maps for Three.js -->
     <script type="importmap">
@@ -755,26 +665,101 @@
             labelRenderer.render(scene, camera);
         }
 
-        // --- 國小五下：球體小檢核邏輯 ---
+        // --- 國小五下：球體小檢核邏輯與 UI 控制 ---
         let currentStep = 0;
-        const hud = document.getElementById('sphere-quiz-hud');
-        const hudContent = document.getElementById('hud-content');
-        const hudStepIndicator = document.getElementById('hud-step-indicator');
-        const hudToggle = document.getElementById('hud-toggle-btn');
-        const hudClose = document.getElementById('hud-close-btn');
+        let isQuizOpen = true; // 預設展開題目以利學生回答
 
-        if (hudClose && hudToggle) {
-            hudClose.onclick = () => { hud.style.display = 'none'; hudToggle.style.display = 'block'; };
-            hudToggle.onclick = () => { hud.style.display = 'block'; hudToggle.style.display = 'none'; };
+        const hud = document.getElementById("sphere-quiz-hud");
+        const hudContent = document.getElementById("hud-content");
+        const hudStepIndicator = document.getElementById("hud-step-indicator");
+        const topStepNum = document.getElementById("top-step-num");
+        const topToggleText = document.getElementById("top-toggle-text");
+        const hudToggle = document.getElementById("hud-toggle-btn");
+        const hudClose = document.getElementById("hud-close-btn");
+        const btnResetView = document.getElementById("btn-reset-view");
+        const btnFullscreen = document.getElementById("btn-fullscreen");
+        const btnCollapseInfo = document.getElementById("btn-collapse-info");
+        const sideInfoBody = document.getElementById("side-info-body");
+
+        function updateQuizVisibility() {
+            if (isQuizOpen) {
+                hud.style.display = "block";
+                topToggleText.textContent = "▲ 收合";
+            } else {
+                hud.style.display = "none";
+                topToggleText.textContent = "▼ 展開";
+            }
         }
+
+        if (hudToggle) {
+            hudToggle.onclick = () => {
+                isQuizOpen = !isQuizOpen;
+                updateQuizVisibility();
+            };
+        }
+        if (hudClose) {
+            hudClose.onclick = () => {
+                isQuizOpen = false;
+                updateQuizVisibility();
+            };
+        }
+
+        if (btnResetView) {
+            btnResetView.onclick = () => {
+                camera.position.set(10, 10, 15);
+                controls.target.set(0, 0, 0);
+                controls.update();
+            };
+        }
+
+        if (btnFullscreen) {
+            btnFullscreen.onclick = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                }
+            };
+        }
+
+        if (btnCollapseInfo && sideInfoBody) {
+            let isInfoOpen = true;
+            btnCollapseInfo.onclick = () => {
+                isInfoOpen = !isInfoOpen;
+                sideInfoBody.style.display = isInfoOpen ? "block" : "none";
+                btnCollapseInfo.textContent = isInfoOpen ? "收合 ▲" : "展開 ▼";
+            };
+        }
+
+        // 綁定導航按鈕
+        document.querySelectorAll(".step-nav-btn").forEach(btn => {
+            btn.onclick = () => {
+                currentStep = parseInt(btn.dataset.step);
+                renderSphereQuiz();
+            };
+        });
 
         function renderSphereQuiz() {
             if (!hudContent) return;
             hudStepIndicator.textContent = `題 ${currentStep + 1} / 3`;
+            if (topStepNum) topStepNum.textContent = `題 ${currentStep + 1}/3`;
+
+            // 更新導航鈕高亮
+            document.querySelectorAll(".step-nav-btn").forEach(btn => {
+                const s = parseInt(btn.dataset.step);
+                if (s === currentStep) {
+                    btn.style.background = "#7c3aed";
+                    btn.style.color = "white";
+                } else {
+                    btn.style.background = "#f8fafc";
+                    btn.style.color = "#475569";
+                }
+            });
+
             if (currentStep === 0) {
                 hudContent.innerHTML = `
-                    <h3>🎯 任務 1：球心、半徑與直徑</h3>
-                    <p>拖曳紅色球體半徑線：從球心到球面上任一點的距離都相等，這段長度叫做？直徑與半徑是什麼關係？</p>
+                    <div style="font-size:13px; font-weight:bold; color:#1e293b; margin-bottom:4px;">🎯 任務 1：球心、半徑與直徑</div>
+                    <p style="font-size:12px; color:#475569; margin:0 0 8px; line-height:1.5;">從球心到球面上任一點的距離都相等，這段長度叫做？直徑與半徑是什麼關係？</p>
                     <button class="hud-btn" data-ans="1">半徑；直徑是半徑的 2 倍 (直徑 = 2 × 半徑)</button>
                     <button class="hud-btn" data-ans="0">直徑；直徑是半徑的 1/2</button>
                     <button class="hud-btn" data-ans="0">圓周；直徑等於圓周長</button>
@@ -782,8 +767,8 @@
                 `;
             } else if (currentStep === 1) {
                 hudContent.innerHTML = `
-                    <h3>🎯 任務 2：球體的平面切面是什麼形狀？</h3>
-                    <p>滑動下方「移動切割面」滑桿，從各個位置切切看球體：切口的剖面形狀一定是什麼？</p>
+                    <div style="font-size:13px; font-weight:bold; color:#1e293b; margin-bottom:4px;">🎯 任務 2：球體的平面切面是什麼形狀？</div>
+                    <p style="font-size:12px; color:#475569; margin:0 0 8px; line-height:1.5;">滑動下方「移動切割面」滑桿，從各個位置切切看球體：切口的剖面形狀一定是什麼？</p>
                     <button class="hud-btn" data-ans="1">永遠都是圓形 (Circle)</button>
                     <button class="hud-btn" data-ans="0">有時候是橢圓形，有時候是圓形</button>
                     <button class="hud-btn" data-ans="0">正方形</button>
@@ -791,8 +776,8 @@
                 `;
             } else if (currentStep === 2) {
                 hudContent.innerHTML = `
-                    <h3>🎯 任務 3：什麼時候切面的面積最大？</h3>
-                    <p>把切割面滑桿拉到中間 (切割面高度 = 0)：什麼時候切面的圓形最大？這個大圓的直徑等於球的什麼？</p>
+                    <div style="font-size:13px; font-weight:bold; color:#1e293b; margin-bottom:4px;">🎯 任務 3：什麼時候切面的面積最大？</div>
+                    <p style="font-size:12px; color:#475569; margin:0 0 8px; line-height:1.5;">把切割面滑桿拉到中間 (切割面位置 = 0)：什麼時候切面的圓形最大？這個大圓的直徑等於球的什麼？</p>
                     <button class="hud-btn" data-ans="1">切面通過球心時最大，它的直徑等於球的直徑</button>
                     <button class="hud-btn" data-ans="0">切在最頂端時最大</button>
                     <button class="hud-btn" data-ans="0">每一個切面的大小都完全一樣</button>
@@ -800,39 +785,39 @@
                 `;
             }
 
-            hudContent.querySelectorAll('.hud-btn').forEach(btn => {
+            hudContent.querySelectorAll(".hud-btn").forEach(btn => {
                 btn.onclick = () => {
-                    const fb = document.getElementById('hud-fb');
-                    if (btn.dataset.ans === '1') {
-                        fb.className = 'hud-feedback show ok';
-                        fb.innerHTML = '✅ 答對了！' + (currentStep === 0 ? '球心到球面上任一點距離皆等於半徑！' : currentStep === 1 ? '無論怎麼切，球的截面永遠是圓形！' : '通過球心的切面最大，其半徑就是球半徑！');
+                    const fb = document.getElementById("hud-fb");
+                    if (btn.dataset.ans === "1") {
+                        fb.className = "hud-feedback show ok";
+                        fb.innerHTML = "✅ 答對了！" + (currentStep === 0 ? "球心到球面上任一點距離皆等於半徑！" : currentStep === 1 ? "無論怎麼切，球的截面永遠是圓形！" : "通過球心的切面最大，其半徑就是球半徑！");
                         
                         if (currentStep < 2) {
-                            if (!hudContent.querySelector('.hud-next')) {
-                                const nextBtn = document.createElement('button');
-                                nextBtn.className = 'hud-next';
-                                nextBtn.textContent = '前往下一題 →';
+                            if (!hudContent.querySelector(".hud-next")) {
+                                const nextBtn = document.createElement("button");
+                                nextBtn.className = "hud-next";
+                                nextBtn.textContent = "前往下一題 →";
                                 nextBtn.onclick = () => { currentStep++; renderSphereQuiz(); };
                                 hudContent.appendChild(nextBtn);
                             }
                         } else {
-                            if (!hudContent.querySelector('.hud-next')) {
-                                const finishBtn = document.createElement('button');
-                                finishBtn.className = 'hud-next';
-                                finishBtn.style.background = 'linear-gradient(90deg, #10b981, #059669)';
-                                finishBtn.textContent = '🎉 檢核完成！返回學習地圖';
+                            if (!hudContent.querySelector(".hud-next")) {
+                                const finishBtn = document.createElement("button");
+                                finishBtn.className = "hud-next";
+                                finishBtn.style.background = "linear-gradient(90deg, #10b981, #059669)";
+                                finishBtn.textContent = "🎉 檢核完成！返回學習地圖";
                                 finishBtn.onclick = () => {
                                     try {
                                         if (window.parent) {
-                                            window.parent.postMessage({ type: 'STEP_COMPLETED', stepId: 's3' }, '*');
-                                            if (window.parent.document.getElementById('viewerBack')) {
-                                                window.parent.document.getElementById('viewerBack').click();
+                                            window.parent.postMessage({ type: "STEP_COMPLETED", stepId: "s3" }, "*");
+                                            if (window.parent.document.getElementById("viewerBack")) {
+                                                window.parent.document.getElementById("viewerBack").click();
                                             }
                                         }
-                                        const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
-                                        if (!p.done.includes('s3')) {
-                                            p.done.push('s3');
-                                            localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
+                                        const p = JSON.parse(localStorage.getItem("geo5-progress-v1") || "{"done":[],"best":null}");
+                                        if (!p.done.includes("s3")) {
+                                            p.done.push("s3");
+                                            localStorage.setItem("geo5-progress-v1", JSON.stringify(p));
                                         }
                                     } catch(e) {}
                                 };
@@ -840,13 +825,14 @@
                             }
                         }
                     } else {
-                        fb.className = 'hud-feedback show err';
-                        fb.innerHTML = '❌ 再想想看，可以拖曳 3D 球體或滑桿觀察看看喔！';
+                        fb.className = "hud-feedback show err";
+                        fb.innerHTML = "❌ 再想想看，可以拖曳 3D 球體或滑桿觀察看看喔！";
                     }
                 };
             });
         }
         renderSphereQuiz();
+        updateQuizVisibility();
     </script>
 </body>
 </html>

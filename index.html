@@ -154,15 +154,22 @@
     .explain.show { display: block; }
 
     /* 教具 iframe */
-    .viewer { position: fixed; inset: 0; z-index: 80; background: #0f172a; display: none; flex-direction: column; }
-    .viewer.show { display: flex; }
-    .viewer-bar {
-      display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px;
-      padding-top: calc(8px + env(safe-area-inset-top));
-      background: linear-gradient(90deg, #312e81, #1e1b4b); border-bottom: 1px solid var(--line);
+    .viewer { position: fixed; inset: 0; z-index: 80; background: #0f172a; display: none; }
+    .viewer.show { display: block; }
+    .viewer iframe { width: 100%; height: 100%; border: 0; background: #0f172a; }
+    .viewer-float-fs {
+      position: fixed; right: 18px; top: 16px; z-index: 95;
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      background: rgba(30, 27, 75, 0.92); color: #f8fafc;
+      border: 1.5px solid rgba(250, 204, 21, 0.4);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-radius: 50%; font-size: 1.25rem; font-weight: bold;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35); cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
     }
-    .viewer-bar .title { font-weight: 700; font-size: 0.95rem; color: #f8fafc; letter-spacing: 0.5px; }
-    .viewer iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+    .viewer-float-fs:hover { background: #312e81; transform: scale(1.08); }
+    .viewer-float-fs:active { transform: scale(0.92); }
     .viewer-float-back {
       position: fixed; right: 18px; bottom: 20px; z-index: 95;
       display: flex; align-items: center; gap: 6px;
@@ -243,10 +250,9 @@
 
   <!-- 教具檢視器 -->
   <div class="viewer" id="viewer">
-    <div class="viewer-bar">
-      <div class="title" id="viewerTitle">幾何形體互動探索</div>
-    </div>
     <iframe id="viewerFrame" title="互動教具" allow="fullscreen; accelerometer; gyroscope"></iframe>
+    <!-- 右上角全螢幕檢視按鈕 -->
+    <button class="viewer-float-fs" id="viewerFs" title="全螢幕檢視" aria-label="全螢幕">⛶</button>
     <!-- 縮小後浮動在右下方的回到關卡按鈕 (iPad 手指操作極其直覺) -->
     <button class="viewer-float-back" id="viewerBack" title="回到關卡地圖">
       <span>←</span> 回到關卡
@@ -433,7 +439,6 @@
 
     // ===== 教具檢視器 =====
     function openViewer(url, title) {
-      $('viewerTitle').textContent = title;
       $('viewerFrame').src = url;
       $('viewer').classList.add('show');
       document.body.style.overflow = 'hidden';
@@ -444,6 +449,19 @@
       document.body.style.overflow = '';
       syncState();
     };
+    $('viewerFs').onclick = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        $('viewerFs').innerHTML = '🗗';
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        $('viewerFs').innerHTML = '⛶';
+      }
+    };
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) $('viewerFs').innerHTML = '⛶';
+      else $('viewerFs').innerHTML = '🗗';
+    });
 
     function syncState() {
       try {
