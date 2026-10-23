@@ -798,82 +798,62 @@
 
             return (
                 <div className="w-full h-full flex flex-col bg-slate-950 overflow-hidden font-sans select-none">
-                    {/* --- 頂部固定工具列 (適合 iPad 閱讀模式) --- */}
+                    {/* --- 頂部固定工具列 (單行防換行，適配 iPad 橫向/直向) --- */}
                     <header 
                         style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: '6px' }} 
-                        className="bg-slate-900 border-b border-slate-800 px-3 flex flex-wrap items-center justify-between gap-2 text-white z-30 shrink-0"
+                        className="bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 text-white z-30 shrink-0 min-h-[48px]"
                     >
-                        {/* 左側：形體新增快速選單與當前選中形體 */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-slate-400">新增形體：</span>
-                            <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg border border-slate-700">
-                                <button onClick={() => addShape("prism")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增角柱">
+                        {/* 左側：形體新增快速按鈕組 */}
+                        <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[11px] font-bold text-slate-400 hidden xl:inline">新增：</span>
+                            <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-800/90 p-0.5 sm:p-1 rounded-lg border border-slate-700">
+                                <button onClick={() => addShape("prism")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增角柱">
                                     + 角柱
                                 </button>
-                                <button onClick={() => addShape("pyramid")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增角錐">
+                                <button onClick={() => addShape("pyramid")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增角錐">
                                     + 角錐
                                 </button>
-                                <button onClick={() => addShape("cylinder")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增圓柱">
+                                <button onClick={() => addShape("cylinder")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增圓柱">
                                     + 圓柱
                                 </button>
-                                <button onClick={() => addShape("cone")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增圓錐">
+                                <button onClick={() => addShape("cone")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增圓錐">
                                     + 圓錐
                                 </button>
-                                <button onClick={() => addShape("sphere")} className="px-2 py-1 text-xs font-bold bg-slate-700/60 hover:bg-indigo-600 text-slate-200 hover:text-white rounded transition-colors" title="新增球體">
+                                <button onClick={() => addShape("sphere")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增球體">
                                     + 球體
                                 </button>
                             </div>
-
-                            {selectedShape && (
-                                <div className="hidden sm:flex items-center gap-1.5 bg-indigo-950/80 border border-indigo-700 px-2.5 py-1 rounded-lg text-xs text-indigo-200">
-                                    <span className="font-bold text-white">{SHAPE_NAMES[selectedShape.type]}</span>
-                                    <button onClick={duplicateShape} className="hover:text-white text-indigo-300 p-0.5" title="複製此形體">
-                                        <IconCopy />
-                                    </button>
-                                    <button onClick={(e) => removeShape(selectedShape.id, e)} className="hover:text-rose-400 text-rose-300 p-0.5" title="刪除此形體">
-                                        <IconTrash />
-                                    </button>
-                                </div>
-                            )}
                         </div>
 
-                        {/* 中間：關卡快速切換 / 回到首頁 下拉選單 */}
-                        <div className="flex items-center gap-1.5 bg-slate-800/95 border border-indigo-500/60 rounded-xl px-3 py-1 shadow-md">
-                            <span className="text-xs text-amber-400 font-bold whitespace-nowrap">📍 關卡導覽:</span>
+                        {/* 中間：關卡快速切換 下拉選單 */}
+                        <div className="flex items-center bg-slate-800/95 border border-indigo-500/70 rounded-lg px-2 py-1 shadow-sm shrink-0">
                             <select
                                 value="s1"
                                 onChange={(e) => handleNavigate(e.target.value)}
-                                className="bg-transparent text-white font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                className="bg-transparent text-amber-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
                                 id="levelNavSelect"
                             >
-                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 回到學習地圖 (首頁)</option>
-                                <option value="s1" className="bg-slate-800 text-white font-bold">第 1 關：認識柱體與錐體 (目前)</option>
+                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 回到學習地圖</option>
+                                <option value="s1" className="bg-slate-800 text-white font-bold">📍 第 1 關：柱體與錐體 (目前)</option>
                                 <option value="s2" className="bg-slate-800 text-white">第 2 關：展開圖與組合</option>
                                 <option value="s3" className="bg-slate-800 text-white">第 3 關：認識球</option>
                                 <option value="quiz" className="bg-slate-800 text-yellow-300">★ 總測驗挑戰</option>
                             </select>
                         </div>
 
-                        {/* 右側：模式切換、重置視角、檢核開關 */}
-                        <div className="flex items-center gap-2">
-                            <div className="hidden md:flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-xs">
-                                <button 
-                                    onClick={() => setInteractionMode("moveItem")}
-                                    className={`px-2 py-1 font-bold transition-colors ${interactionMode === "moveItem" ? "bg-amber-600 text-white" : "text-slate-400 hover:text-white"}`}
-                                    title="水平移動"
-                                >
-                                    移動
-                                </button>
+                        {/* 右側：視角操作切換、重置視角、檢核開關 */}
+                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                            <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-xs">
                                 <button 
                                     onClick={() => setInteractionMode("rotate")}
-                                    className={`px-2 py-1 font-bold transition-colors ${interactionMode === "rotate" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
+                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === "rotate" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
                                     title="旋轉視角"
                                 >
                                     旋轉
                                 </button>
                                 <button 
                                     onClick={() => setInteractionMode("pan")}
-                                    className={`px-2 py-1 font-bold transition-colors ${interactionMode === "pan" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
+                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === "pan" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
                                     title="平移視角"
                                 >
                                     平移
@@ -881,20 +861,20 @@
                             </div>
                             <button 
                                 onClick={resetView} 
-                                className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors"
-                                title="重置為最佳視角"
+                                className="px-2 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+                                title="重置視角"
                             >
-                                重置視角
+                                ↺ 重置
                             </button>
 
                             {/* 頂部檢核任務切換按鈕 */}
                             <button 
                                 onClick={() => setQuizOpen(!quizOpen)} 
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ${quizOpen ? "bg-purple-600 text-white ring-2 ring-purple-300" : "bg-purple-700/80 text-purple-100 hover:bg-purple-600"}`}
+                                className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md whitespace-nowrap ${quizOpen ? "bg-purple-600 text-white ring-2 ring-purple-300" : "bg-purple-700/80 text-purple-100 hover:bg-purple-600"}`}
                                 id="toggleQuizBtn"
                             >
-                                <span>🎯 檢核任務 (題 {quizStep + 1}/4)</span>
-                                <span>{quizOpen ? "▲ 收合" : "▼ 展開"}</span>
+                                <span>🎯 檢核 ({quizStep + 1}/4)</span>
+                                <span>{quizOpen ? "▲" : "▼"}</span>
                             </button>
                         </div>
                     </header>

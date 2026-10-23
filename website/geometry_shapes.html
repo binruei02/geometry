@@ -627,16 +627,15 @@
 
             return (
                 <div className="w-full h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
-                    {/* --- 頂部精簡導航與下拉選單工具列 (適合 iPad 閱讀模式) --- */}
+                    {/* --- 頂部精簡導航與下拉選單工具列 (單行防換行，保證邊數與展開樣式完整可見) --- */}
                     <header 
                         style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: '6px' }}
-                        className="min-h-[52px] bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 md:px-4 flex items-center justify-between z-30 shrink-0 gap-2"
+                        className="bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 text-white z-30 shrink-0 min-h-[48px]"
                     >
-                        {/* 左側：形狀與展開圖樣式下拉選單 */}
-                        <div className="flex items-center gap-2 overflow-x-auto py-1">
+                        {/* 左側：形狀、展開樣式、邊數下拉選單 (完整顯示，絕不被遮擋) */}
+                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                             {/* 形狀選擇下拉選單 */}
-                            <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1">
-                                <span className="text-xs text-slate-400 font-bold whitespace-nowrap hidden sm:inline">形狀:</span>
+                            <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 sm:px-2 py-1">
                                 <select 
                                     value={shapeType} 
                                     onChange={(e) => { 
@@ -644,21 +643,21 @@
                                         resetPositions(); 
                                         resetView(); 
                                     }}
-                                    className="bg-transparent text-white font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                    className="bg-transparent text-white font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
                                     id="shapeSelect"
                                 >
-                                    <option value="prism" className="bg-slate-800 text-white">🔷 角柱 (Prism)</option>
-                                    <option value="cylinder" className="bg-slate-800 text-white">🥫 圓柱 (Cylinder)</option>
-                                    <option value="pyramid" className="bg-slate-800 text-white">🔺 角錐 (Pyramid)</option>
-                                    <option value="cone" className="bg-slate-800 text-white">🍦 圓錐 (Cone)</option>
-                                    <option value="cube" className="bg-slate-800 text-white">🧊 正方體 11 種展開圖 (Cube)</option>
+                                    <option value="prism" className="bg-slate-800 text-white">🔷 角柱</option>
+                                    <option value="cylinder" className="bg-slate-800 text-white">🥫 圓柱</option>
+                                    <option value="pyramid" className="bg-slate-800 text-white">🔺 角錐</option>
+                                    <option value="cone" className="bg-slate-800 text-white">🍦 圓錐</option>
+                                    <option value="cube" className="bg-slate-800 text-white">🧊 正方體 (11種)</option>
                                 </select>
                             </div>
 
                             {/* 展開圖樣式下拉選單 (根據形狀動態切換) */}
                             {shapeType === 'cube' ? (
-                                <div className="flex items-center gap-1.5 bg-indigo-950/80 border border-indigo-700/80 rounded-lg px-2 py-1">
-                                    <span className="text-xs text-indigo-300 font-bold whitespace-nowrap">展開圖:</span>
+                                <div className="flex items-center bg-indigo-950/80 border border-indigo-700/80 rounded-lg px-1.5 sm:px-2 py-1">
+                                    <span className="text-[11px] text-indigo-300 font-bold whitespace-nowrap hidden lg:inline mr-1">展開:</span>
                                     <select 
                                         value={cubeNetType} 
                                         onChange={(e) => { 
@@ -666,7 +665,7 @@
                                             resetAnimation(); 
                                             resetView(); 
                                         }}
-                                        className="bg-transparent text-indigo-200 font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                        className="bg-transparent text-indigo-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
                                         id="cubeNetSelect"
                                     >
                                         <optgroup label="1-4-1 型 (6種)" className="bg-slate-800 text-white">
@@ -689,8 +688,7 @@
                                     </select>
                                 </div>
                             ) : (shapeType === 'prism' || shapeType === 'pyramid') ? (
-                                <div className="flex items-center gap-1.5 bg-blue-950/80 border border-blue-700/80 rounded-lg px-2 py-1">
-                                    <span className="text-xs text-blue-300 font-bold whitespace-nowrap">展開樣式:</span>
+                                <div className="flex items-center bg-blue-950/80 border border-blue-700/80 rounded-lg px-1.5 sm:px-2 py-1">
                                     <select 
                                         value={shapeType === 'prism' ? prismNetType : pyramidNetType} 
                                         onChange={(e) => { 
@@ -699,28 +697,28 @@
                                             resetPositions(); 
                                             resetView(); 
                                         }}
-                                        className="bg-transparent text-blue-200 font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                        className="bg-transparent text-blue-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
                                         id="netTypeSelect"
                                     >
                                         {shapeType === 'prism' ? (
                                              <>
-                                                <option value="strip" className="bg-slate-800 text-white">鏈狀展開 (Strip)</option>
-                                                <option value="star" className="bg-slate-800 text-white">星形展開 (Star)</option>
+                                                <option value="strip" className="bg-slate-800 text-white">鏈狀展開</option>
+                                                <option value="star" className="bg-slate-800 text-white">星形展開</option>
                                             </>
                                         ) : (
-                                            <>
-                                                <option value="star" className="bg-slate-800 text-white">星形展開 (Star)</option>
-                                                <option value="chain" className="bg-slate-800 text-white">扇形展開 (Fan)</option>
+                                             <>
+                                                <option value="star" className="bg-slate-800 text-white">星形展開</option>
+                                                <option value="chain" className="bg-slate-800 text-white">扇形展開</option>
                                             </>
                                         )}
                                     </select>
                                 </div>
                             ) : null}
 
-                            {/* 邊數下拉選單 (非平滑曲面且非正方體時) */}
+                            {/* 邊數下拉選單 (完整顯示，絕不截斷) */}
                             {!isSmooth && shapeType !== 'cube' && (
-                                <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1">
-                                    <span className="text-xs text-slate-400 font-bold whitespace-nowrap">邊數:</span>
+                                <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 sm:px-2 py-1">
+                                    <span className="text-[11px] text-slate-400 font-bold whitespace-nowrap mr-1">邊數:</span>
                                     <select 
                                         value={sides} 
                                         onChange={(e) => { 
@@ -728,50 +726,49 @@
                                             resetPositions(); 
                                             resetView(); 
                                         }}
-                                        className="bg-transparent text-cyan-300 font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                        className="bg-transparent text-cyan-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
                                         id="sidesSelect"
                                     >
-                                        <option value={3} className="bg-slate-800 text-white">3 邊 (三角)</option>
-                                        <option value={4} className="bg-slate-800 text-white">4 邊 (四角)</option>
-                                        <option value={5} className="bg-slate-800 text-white">5 邊 (五角)</option>
-                                        <option value={6} className="bg-slate-800 text-white">6 邊 (六角)</option>
-                                        <option value={8} className="bg-slate-800 text-white">8 邊 (八角)</option>
+                                        <option value={3} className="bg-slate-800 text-white">3 邊</option>
+                                        <option value={4} className="bg-slate-800 text-white">4 邊</option>
+                                        <option value={5} className="bg-slate-800 text-white">5 邊</option>
+                                        <option value={6} className="bg-slate-800 text-white">6 邊</option>
+                                        <option value={8} className="bg-slate-800 text-white">8 邊</option>
                                     </select>
                                 </div>
                             )}
                         </div>
 
-                        {/* 中間：關卡快速切換 / 回到首頁 下拉選單 */}
-                        <div className="flex items-center gap-1.5 bg-slate-800/95 border border-purple-500/60 rounded-xl px-3 py-1 shadow-md">
-                            <span className="text-xs text-amber-400 font-bold whitespace-nowrap">📍 關卡導覽:</span>
+                        {/* 中間：關卡快速切換 下拉選單 */}
+                        <div className="flex items-center bg-slate-800/95 border border-purple-500/70 rounded-lg px-2 py-1 shadow-sm shrink-0">
                             <select
                                 value="s2"
                                 onChange={(e) => handleNavigate(e.target.value)}
-                                className="bg-transparent text-white font-bold text-xs md:text-sm focus:outline-none cursor-pointer pr-1"
+                                className="bg-transparent text-amber-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
                                 id="levelNavSelect"
                             >
-                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 回到學習地圖 (首頁)</option>
+                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 回到學習地圖</option>
                                 <option value="s1" className="bg-slate-800 text-white">第 1 關：認識柱體與錐體</option>
-                                <option value="s2" className="bg-slate-800 text-white font-bold">第 2 關：展開圖與組合 (目前)</option>
+                                <option value="s2" className="bg-slate-800 text-white font-bold">📍 第 2 關：展開圖與組合 (目前)</option>
                                 <option value="s3" className="bg-slate-800 text-white">第 3 關：認識球</option>
                                 <option value="quiz" className="bg-slate-800 text-yellow-300">★ 總測驗挑戰</option>
                             </select>
                         </div>
 
-                        {/* 右側：檢核任務開關與視角切換 */}
-                        <div className="flex items-center gap-2">
+                        {/* 右側：模式切換、重置視角、檢核開關 */}
+                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                             {/* 視角操作模式按鈕 */}
-                            <div className="hidden sm:flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                            <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-xs">
                                 <button 
                                     onClick={() => setInteractionMode('rotate')} 
-                                    className={`px-2.5 py-1 text-xs font-bold transition-colors ${interactionMode === 'rotate' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === 'rotate' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                                     title="旋轉視角"
                                 >
                                     旋轉
                                 </button>
                                 <button 
                                     onClick={() => setInteractionMode('pan')} 
-                                    className={`px-2.5 py-1 text-xs font-bold transition-colors ${interactionMode === 'pan' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === 'pan' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                                     title="平移視角"
                                 >
                                     平移
@@ -779,19 +776,20 @@
                             </div>
                             <button 
                                 onClick={resetView} 
-                                className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                                className="px-2 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+                                title="重置視角"
                             >
-                                重置視角
+                                ↺ 重置
                             </button>
 
                             {/* 頂部檢核任務切換按鈕 */}
                             <button 
                                 onClick={() => setQuizOpen(!quizOpen)} 
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ${quizOpen ? 'bg-purple-600 text-white ring-2 ring-purple-300' : 'bg-purple-700/80 text-purple-100 hover:bg-purple-600'}`}
+                                className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md whitespace-nowrap ${quizOpen ? 'bg-purple-600 text-white ring-2 ring-purple-300' : 'bg-purple-700/80 text-purple-100 hover:bg-purple-600'}`}
                                 id="toggleQuizBtn"
                             >
-                                <span>📝 檢核任務 (題 {quizStep + 1}/5)</span>
-                                <span>{quizOpen ? '▲ 收合' : '▼ 展開'}</span>
+                                <span>🎯 檢核 ({quizStep + 1}/5)</span>
+                                <span>{quizOpen ? '▲' : '▼'}</span>
                             </button>
                         </div>
                     </header>
