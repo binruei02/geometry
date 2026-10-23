@@ -1,22 +1,91 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>立體圖形學習平台</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body{font-family:Arial,sans-serif;background:#f9fafb;margin:0;padding:2rem;display:flex;flex-direction:column;align-items:center;}
-h1{color:#333;}
-nav a{display:block;margin:0.5rem 0;padding:0.5rem 1rem;background:#4f46e5;color:#fff;border-radius:0.5rem;text-decoration:none;text-align:center;}
-nav a:hover{background:#4338ca;}
-</style>
+  <meta charset="UTF-8">
+  <title>3D Geometry Learning Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f0f4ff, #e0e8ff);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    header {
+      width: 100%;
+      padding: 2rem 0;
+      text-align: center;
+      background: radial-gradient(circle at top left, #4f46e5, #4338ca);
+      color: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      width: 90%;
+      max-width: 900px;
+      margin-top: -2rem; /* overlap header */
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+    }
+    .card a {
+      text-decoration: none;
+      color: #4f46e5;
+      font-weight: 600;
+      display: block;
+    }
+    .card img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 0.5rem;
+    }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
-<h1>立體圖形學習平台</h1>
-<nav>
-<a href="website/interactive_sphere.html">Interactive Sphere</a>
-<a href="website/geometry_shapes.html">Geometry Shapes</a>
-<a href="website/shape_comparison.html">Shape Comparison</a>
-</nav>
+  <header>
+    <h1>3D Geometry Learning Hub</h1>
+  </header>
+  <section class="cards">
+    <div class="card">
+      <img src="https://via.placeholder.com/80?text=🌐" alt="Sphere">
+      <a href="website/interactive_sphere.html">Interactive Sphere</a>
+    </div>
+    <div class="card">
+      <img src="https://via.placeholder.com/80?text=🔺" alt="Shapes">
+      <a href="website/geometry_shapes.html">Geometry Shapes</a>
+    </div>
+    <div class="card">
+      <img src="https://via.placeholder.com/80?text=🔁" alt="Comparison">
+      <a href="website/shape_comparison.html">Shape Comparison</a>
+    </div>
+  </section>
+  <footer>
+    © 2026 立體圖形學習平台 - All rights reserved.
+  </footer>
 </body>
 </html>
