@@ -1093,29 +1093,6 @@
                                         )}
                                     </div>
                                 )}
-                                            <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                {quizFeedback.msg}
-                                            </div>
-                                        )}
-                                        {quizCompleted && (
-                                            <div className="pt-2">
-                                                <div className="bg-amber-100 text-amber-900 p-2.5 rounded-xl text-xs font-bold text-center mb-2">
-                                                    🎉 恭喜完成第 1 關所有操作檢核！
-                                                </div>
-                                                <button 
-                                                    onClick={() => {
-                                                        if (window.parent && window.parent.document.getElementById('viewerBack')) {
-                                                            window.parent.document.getElementById('viewerBack').click();
-                                                        }
-                                                    }}
-                                                    className="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 active:scale-95"
-                                                >
-                                                    返回學習地圖 (已解鎖第 2 關) ✓
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         ) : (
                             <button 
