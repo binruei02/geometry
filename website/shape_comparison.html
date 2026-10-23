@@ -1000,10 +1000,10 @@
                                                                 if (window.parent) {
                                                                     window.parent.postMessage({ type: "STEP_COMPLETED", stepId: "s1" }, "*");
                                                                 }
-                                                                const p = JSON.parse(localStorage.getItem("geo5-progress-v1") || "{"done":[],"best":null}");
-                                                                if (!p.done.includes("s1")) {
-                                                                    p.done.push("s1");
-                                                                    localStorage.setItem("geo5-progress-v1", JSON.stringify(p));
+                                                                const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                                                                if (!p.done.includes('s1')) {
+                                                                    p.done.push('s1');
+                                                                    localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
                                                                 }
                                                             } catch(e) {}
                                                         } else {
