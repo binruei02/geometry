@@ -439,7 +439,8 @@
 
     // ===== 教具檢視器 =====
     function openViewer(url, title) {
-      $('viewerFrame').src = url;
+      const cacheBustUrl = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      $('viewerFrame').src = cacheBustUrl;
       $('viewer').classList.add('show');
       document.body.style.overflow = 'hidden';
     }
