@@ -109,16 +109,20 @@
     .panel-bg.show { display: flex; animation: fade 0.25s; }
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
     .panel {
-      width: min(860px, 100%); max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      width: min(1080px, 96vw); max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
       background: linear-gradient(160deg, #312e81, #1e1b4b); border: 1px solid var(--line);
-      border-radius: 28px; padding: 26px 24px; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+      border-radius: 28px; padding: 26px 26px; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
       animation: pop 0.3s cubic-bezier(.2,1.4,.4,1);
     }
     @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     .panel h2 { margin: 0 0 4px; font-size: 1.6rem; }
     .panel .goal { color: var(--c3); font-weight: 700; margin: 0 0 14px; }
     .concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .concept { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 16px; line-height: 1.7; }
+    .concepts-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media (max-width: 768px) {
+      .concepts-4col { grid-template-columns: repeat(2, 1fr); }
+    }
+    .concept { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 12px 14px; line-height: 1.6; font-size: 0.93rem; }
     .concept b { color: var(--c2); }
     .formula {
       margin-top: 12px; background: rgba(250,204,21,0.12); border: 1px dashed var(--c3);
@@ -157,19 +161,6 @@
     .viewer { position: fixed; inset: 0; z-index: 80; background: #0f172a; display: none; }
     .viewer.show { display: block; }
     .viewer iframe { width: 100%; height: 100%; border: 0; background: #0f172a; }
-    .viewer-float-fs {
-      position: fixed; right: 18px; top: 16px; z-index: 95;
-      display: flex; align-items: center; justify-content: center;
-      width: 44px; height: 44px;
-      background: rgba(30, 27, 75, 0.92); color: #f8fafc;
-      border: 1.5px solid rgba(250, 204, 21, 0.4);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border-radius: 50%; font-size: 1.25rem; font-weight: bold;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.35); cursor: pointer;
-      transition: transform 0.15s, background 0.15s;
-    }
-    .viewer-float-fs:hover { background: #312e81; transform: scale(1.08); }
-    .viewer-float-fs:active { transform: scale(0.92); }
     .viewer-float-back {
       position: fixed; right: 18px; bottom: 20px; z-index: 95;
       display: flex; align-items: center; gap: 6px;
@@ -248,11 +239,9 @@
     <div class="panel" id="panel"></div>
   </div>
 
-  <!-- 教具檢視器 -->
+  <!-- 教具檢視器 (全螢幕功能整合於各教具功能列中，右下角提供直覺返回鈕) -->
   <div class="viewer" id="viewer">
     <iframe id="viewerFrame" title="互動教具" allow="fullscreen; accelerometer; gyroscope"></iframe>
-    <!-- 右上角全螢幕檢視按鈕 -->
-    <button class="viewer-float-fs" id="viewerFs" title="全螢幕檢視" aria-label="全螢幕">⛶</button>
     <!-- 縮小後浮動在右下方的回到關卡按鈕 (iPad 手指操作極其直覺) -->
     <button class="viewer-float-back" id="viewerBack" title="回到關卡地圖">
       <span>←</span> 回到關卡
@@ -418,7 +407,7 @@
       openPanel(`
         <h2>第 ${i + 1} 關｜${s.title}</h2>
         <p class="goal">${s.goal}</p>
-        <div class="concepts">${s.concepts.map((c) => `<div class="concept">${c}</div>`).join('')}</div>
+        <div class="${s.concepts.length === 4 ? 'concepts-4col' : 'concepts'}">${s.concepts.map((c) => `<div class="concept">${c}</div>`).join('')}</div>
         <div class="formula">${s.formula}</div>
         <h3 style="margin:20px 0 0">動手操作任務</h3>
         <ul class="tasks">${s.tasks.map((t) => `<li>${t}</li>`).join('')}</ul>
@@ -450,19 +439,6 @@
       document.body.style.overflow = '';
       syncState();
     };
-    $('viewerFs').onclick = () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-        $('viewerFs').innerHTML = '🗗';
-      } else {
-        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-        $('viewerFs').innerHTML = '⛶';
-      }
-    };
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement) $('viewerFs').innerHTML = '⛶';
-      else $('viewerFs').innerHTML = '🗗';
-    });
 
     function syncState() {
       try {
@@ -476,7 +452,17 @@
     window.addEventListener('storage', syncState);
     window.addEventListener('message', (e) => {
       if (!e.data) return;
-      if (e.data.type === 'STEP_COMPLETED') {
+      if (e.data.type === 'TOGGLE_FULLSCREEN') {
+        if (!document.fullscreenElement) {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      } else if (e.data.type === 'STEP_COMPLETED') {
         const sid = e.data.stepId || e.data.currentStepId;
         if (sid && !isDone(sid)) {
           state.done.push(sid);

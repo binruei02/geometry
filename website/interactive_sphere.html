@@ -124,30 +124,31 @@
 
     <div id="loading">載入 3D 引擎中...<br>Loading 3D Engine...</div>
     
-    <!-- 頂部固定導航列 (節省版面，含全螢幕與檢核切換) -->
-    <header id="sphere-topbar" style="position:fixed; top:0; left:0; width:100%; height:46px; background:rgba(15, 23, 42, 0.94); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-bottom:1px solid rgba(51, 65, 85, 0.8); display:flex; justify-content:space-between; align-items:center; padding:0 12px; box-sizing:border-box; z-index:100; color:white; font-family:sans-serif;">
+    <!-- 頂部固定導航列 (節省版面，保留足夠安全高度避開 iPad 狀態列) -->
+    <header id="sphere-topbar" style="position:fixed; top:0; left:0; width:100%; padding-top:max(10px, env(safe-area-inset-top, 24px)); padding-bottom:8px; padding-left:14px; padding-right:14px; background:rgba(15, 23, 42, 0.95); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid rgba(51, 65, 85, 0.8); display:flex; justify-content:space-between; align-items:center; box-sizing:border-box; z-index:100; color:white; font-family:sans-serif;">
         <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-weight:bold; font-size:13px; color:#e2e8f0; display:flex; align-items:center; gap:6px;">
                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#38bdf8;"></span>
                 球體幾何特性互動觀察
             </span>
-            <button id="btn-reset-view" style="padding:4px 10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:11px; font-weight:bold; border-radius:6px; cursor:pointer;" title="重置視角">
+            <button id="btn-reset-view" style="padding:5px 10px; background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:11px; font-weight:bold; border-radius:6px; cursor:pointer;" title="重置視角">
                 ↺ 重置視角
             </button>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-            <button id="hud-toggle-btn" style="background:#7c3aed; color:white; border:none; padding:5px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(124,58,237,0.4);">
+            <button id="hud-toggle-btn" style="background:#7c3aed; color:white; border:none; padding:6px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(124,58,237,0.4);">
                 <span>🎯 檢核任務 (<span id="top-step-num">題 1/3</span>)</span>
                 <span id="top-toggle-text">▼ 展開</span>
             </button>
-            <button id="btn-fullscreen" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155; padding:4px 8px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;" title="全螢幕檢視">
-                ⛶
+            <button id="btn-fullscreen" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px;" title="全螢幕檢視">
+                <span id="fs-icon">⛶</span>
+                <span id="fs-text">全螢幕</span>
             </button>
         </div>
     </header>
 
     <!-- 頂部折疊式檢核任務面板 (HUD) -->
-    <div id="sphere-quiz-hud" style="position:fixed; top:46px; left:0; width:100%; max-height:48vh; overflow-y:auto; background:rgba(255, 255, 255, 0.98); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:2px solid #8b5cf6; padding:12px 16px; box-shadow:0 12px 30px rgba(0,0,0,0.2); z-index:90; box-sizing:border-box; display:none;">
+    <div id="sphere-quiz-hud" style="position:fixed; top:calc(46px + max(10px, env(safe-area-inset-top, 24px))); left:0; width:100%; max-height:48vh; overflow-y:auto; background:rgba(255, 255, 255, 0.98); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:2px solid #8b5cf6; padding:12px 16px; box-shadow:0 12px 30px rgba(0,0,0,0.2); z-index:90; box-sizing:border-box; display:none;">
         <div style="max-width:800px; margin:0 auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #ede9fe; flex-wrap:wrap; gap:6px;">
                 <div style="display:flex; align-items:center; gap:6px;">
@@ -168,7 +169,7 @@
     </div>
 
     <!-- 左側操作與特性浮動說明卡片 (避免擋住中央 3D 球體) -->
-    <div id="sphere-side-info" style="position:fixed; top:58px; left:16px; width:220px; background:rgba(255, 255, 255, 0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:14px; border:1px solid rgba(226, 232, 240, 0.9); box-shadow:0 8px 24px rgba(0,0,0,0.1); padding:12px; z-index:20; font-size:12px; color:#334155; line-height:1.5; pointer-events:auto;">
+    <div id="sphere-side-info" style="position:fixed; top:calc(56px + max(10px, env(safe-area-inset-top, 24px))); left:16px; width:220px; background:rgba(255, 255, 255, 0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:14px; border:1px solid rgba(226, 232, 240, 0.9); box-shadow:0 8px 24px rgba(0,0,0,0.1); padding:12px; z-index:20; font-size:12px; color:#334155; line-height:1.5; pointer-events:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:bold; color:#0f172a; border-bottom:1px solid #f1f5f9; padding-bottom:4px;">
             <span>💡 操作與幾何特性</span>
             <button id="btn-collapse-info" style="border:none; background:none; color:#94a3b8; cursor:pointer; font-size:11px;">收合 ▲</button>
@@ -184,7 +185,7 @@
             <div style="border-top:1px dashed #e2e8f0; padding-top:6px;">
                 <b style="color:#0284c7;">📐 球體特性：</b><br>
                 • 球心到球面每一點距離都<b>相等</b>（半徑）<br>
-                • <b>直徑 = 2 × 半徑</b><br>
+                • <b>直徑 = 半徑 × 2</b><br>
                 • 任何平面切過球體，切面皆為<b>圓形</b><br>
                 • 通過球心的切面最大，稱為<b>大圓</b>
             </div>
@@ -712,13 +713,40 @@
             };
         }
 
+        function updateFsButton() {
+            const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
+            const icon = document.getElementById("fs-icon");
+            const txt = document.getElementById("fs-text");
+            if (icon && txt) {
+                if (isFs) {
+                    icon.textContent = "⤓";
+                    txt.textContent = "縮回視窗";
+                    btnFullscreen.style.background = "#334155";
+                    btnFullscreen.style.borderColor = "#94a3b8";
+                } else {
+                    icon.textContent = "⛶";
+                    txt.textContent = "全螢幕";
+                    btnFullscreen.style.background = "#1e293b";
+                    btnFullscreen.style.borderColor = "#334155";
+                }
+            }
+        }
+        document.addEventListener("fullscreenchange", updateFsButton);
+
         if (btnFullscreen) {
             btnFullscreen.onclick = () => {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(() => {});
+                const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
+                if (!isFs) {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                    }
+                    try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
                 } else {
                     if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                    if (window.parent?.document?.exitFullscreen) window.parent.document.exitFullscreen().catch(() => {});
+                    try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
                 }
+                setTimeout(updateFsButton, 100);
             };
         }
 
@@ -760,7 +788,7 @@
                 hudContent.innerHTML = `
                     <div style="font-size:13px; font-weight:bold; color:#1e293b; margin-bottom:4px;">🎯 任務 1：球心、半徑與直徑</div>
                     <p style="font-size:12px; color:#475569; margin:0 0 8px; line-height:1.5;">從球心到球面上任一點的距離都相等，這段長度叫做？直徑與半徑是什麼關係？</p>
-                    <button class="hud-btn" data-ans="1">半徑；直徑是半徑的 2 倍 (直徑 = 2 × 半徑)</button>
+                    <button class="hud-btn" data-ans="1">半徑；直徑是半徑的 2 倍 (直徑 = 半徑 × 2)</button>
                     <button class="hud-btn" data-ans="0">直徑；直徑是半徑的 1/2</button>
                     <button class="hud-btn" data-ans="0">圓周；直徑等於圓周長</button>
                     <div id="hud-fb" class="hud-feedback"></div>
@@ -814,10 +842,10 @@
                                                 window.parent.document.getElementById("viewerBack").click();
                                             }
                                         }
-                                        const p = JSON.parse(localStorage.getItem("geo5-progress-v1") || "{"done":[],"best":null}");
+                                        const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
                                         if (!p.done.includes("s3")) {
                                             p.done.push("s3");
-                                            localStorage.setItem("geo5-progress-v1", JSON.stringify(p));
+                                            localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
                                         }
                                     } catch(e) {}
                                 };
@@ -833,6 +861,7 @@
         }
         renderSphereQuiz();
         updateQuizVisibility();
+        updateFsButton();
     </script>
 </body>
 </html>
