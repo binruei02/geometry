@@ -142,6 +142,35 @@
             const [clickedBases, setClickedBases] = useState([]); // ['top', 'bottom']
             const [quizFeedback, setQuizFeedback] = useState(null);
             const [quizCompleted, setQuizCompleted] = useState(false);
+            const [isFullscreen, setIsFullscreen] = useState(false);
+
+            useEffect(() => {
+                const checkFs = () => {
+                    const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
+                    setIsFullscreen(isFs);
+                };
+                document.addEventListener('fullscreenchange', checkFs);
+                try { window.parent?.document?.addEventListener('fullscreenchange', checkFs); } catch(e) {}
+                checkFs();
+                return () => {
+                    document.removeEventListener('fullscreenchange', checkFs);
+                    try { window.parent?.document?.removeEventListener('fullscreenchange', checkFs); } catch(e) {}
+                };
+            }, []);
+
+            const toggleFullscreen = () => {
+                const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
+                if (!isFs) {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                    }
+                    try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                    if (window.parent?.document?.exitFullscreen) window.parent.document.exitFullscreen().catch(() => {});
+                    try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
+                }
+            };
             // iPad 兩指縮放手勢參照
             const pinchRef = useRef({ dist: 0, scale: 1 });
 
@@ -875,6 +904,17 @@
                             >
                                 <span>🎯 檢核 ({quizStep + 1}/4)</span>
                                 <span>{quizOpen ? "▲" : "▼"}</span>
+                            </button>
+
+                            {/* 全螢幕切換按鈕 */}
+                            <button 
+                                onClick={toggleFullscreen}
+                                className={`px-2 sm:px-2.5 py-1 border rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm whitespace-nowrap ${isFullscreen ? "bg-slate-700 border-slate-500 text-amber-300 ring-1 ring-amber-300" : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"}`}
+                                title={isFullscreen ? "縮回原始視窗" : "全螢幕檢視"}
+                                id="btnFullscreen"
+                            >
+                                <span>{isFullscreen ? "⤓" : "⛶"}</span>
+                                <span>{isFullscreen ? "縮回視窗" : "全螢幕"}</span>
                             </button>
                         </div>
                     </header>
