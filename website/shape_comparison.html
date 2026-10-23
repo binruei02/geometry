@@ -16,6 +16,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
         body {
             font-family: 'Microsoft JhengHei', 'Segoe UI', Roboto, sans-serif;
             background-color: #f8fafc;
@@ -53,9 +62,9 @@
             margin: 0; 
         }
     </style>
-<body class="bg-slate-950 w-screen h-screen overflow-hidden flex flex-col font-sans select-none">
+<body class="bg-slate-950 w-full h-full overflow-hidden flex flex-col font-sans select-none">
 
-    <div id="root" class="w-full h-full flex flex-col"></div>
+    <div id="root" class="w-full h-full flex flex-col overflow-hidden"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
@@ -133,17 +142,8 @@
             const [clickedBases, setClickedBases] = useState([]); // ['top', 'bottom']
             const [quizFeedback, setQuizFeedback] = useState(null);
             const [quizCompleted, setQuizCompleted] = useState(false);
-            const [isFullscreen, setIsFullscreen] = useState(false);
-
-            useEffect(() => {
-                const checkFs = () => {
-                    const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
-                    setIsFullscreen(isFs);
-                };
-                document.addEventListener('fullscreenchange', checkFs);
-                checkFs();
-                return () => document.removeEventListener('fullscreenchange', checkFs);
-            }, []);
+            // iPad 兩指縮放手勢參照
+            const pinchRef = useRef({ dist: 0, scale: 1 });
 
             // 面的互動點擊檢核
             const handleFaceClick = (poly, e) => {
@@ -455,7 +455,12 @@
             };
             
             const handleTouchStart = (e) => {
-                if(e.touches.length === 1) {
+                if (e.touches.length === 2) {
+                    const t0 = e.touches[0];
+                    const t1 = e.touches[1];
+                    const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+                    pinchRef.current = { dist, scale: view.scale };
+                } else if (e.touches.length === 1) {
                     setIsDragging(true);
                     setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
                     setViewStart({ ...view });
@@ -466,7 +471,17 @@
             };
 
             const handleTouchMove = (e) => {
-                if(isDragging && e.touches.length === 1) {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const t0 = e.touches[0];
+                    const t1 = e.touches[1];
+                    const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+                    if (pinchRef.current.dist > 0) {
+                        const factor = dist / pinchRef.current.dist;
+                        const newScale = Math.max(0.2, Math.min(pinchRef.current.scale * factor, 5));
+                        setView(v => ({ ...v, scale: newScale }));
+                    }
+                } else if (isDragging && e.touches.length === 1) {
                     const clientX = e.touches[0].clientX;
                     const clientY = e.touches[0].clientY;
                     
@@ -498,6 +513,13 @@
                         updateSelectedShape('y', newY);
                     }
                 }
+            };
+
+            const handleTouchEnd = (e) => {
+                if (e.touches && e.touches.length < 2) {
+                    pinchRef.current.dist = 0;
+                }
+                handleMouseUp();
             };
             
             // --- 幾何生成 ---
@@ -776,9 +798,9 @@
 
             return (
                 <div className="w-full h-full flex flex-col bg-slate-950 overflow-hidden font-sans select-none">
-                    {/* --- 頂部固定工具列 (保留足夠安全高度避開 iPad 狀態列) --- */}
+                    {/* --- 頂部固定工具列 (適合 iPad 閱讀模式) --- */}
                     <header 
-                        style={{ paddingTop: 'max(10px, env(safe-area-inset-top, 24px))', paddingBottom: '8px' }} 
+                        style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: '6px' }} 
                         className="bg-slate-900 border-b border-slate-800 px-3 flex flex-wrap items-center justify-between gap-2 text-white z-30 shrink-0"
                     >
                         {/* 左側：形體新增快速選單與當前選中形體 */}
@@ -832,7 +854,7 @@
                             </select>
                         </div>
 
-                        {/* 右側：模式切換、重置視角、檢核開關、全螢幕 */}
+                        {/* 右側：模式切換、重置視角、檢核開關 */}
                         <div className="flex items-center gap-2">
                             <div className="hidden md:flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-xs">
                                 <button 
@@ -874,35 +896,12 @@
                                 <span>🎯 檢核任務 (題 {quizStep + 1}/4)</span>
                                 <span>{quizOpen ? "▲ 收合" : "▼ 展開"}</span>
                             </button>
-
-                            {/* 全螢幕切換按鈕 (清楚文字與圖示) */}
-                            <button 
-                                onClick={() => {
-                                    const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
-                                    if (!isFs) {
-                                        if (document.documentElement.requestFullscreen) {
-                                            document.documentElement.requestFullscreen().catch(() => {});
-                                        }
-                                        try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
-                                    } else {
-                                        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-                                        if (window.parent?.document?.exitFullscreen) window.parent.document.exitFullscreen().catch(() => {});
-                                        try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
-                                    }
-                                }} 
-                                className={`px-3 py-1.5 border rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${isFullscreen ? "bg-slate-700 border-slate-500 text-amber-300 ring-1 ring-amber-300" : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"}`}
-                                title={isFullscreen ? "縮回原始視窗" : "全螢幕檢視"}
-                                id="btnFullscreen"
-                            >
-                                <span className="text-sm">{isFullscreen ? "⤓" : "⛶"}</span>
-                                <span>{isFullscreen ? "縮回視窗" : "全螢幕"}</span>
-                            </button>
                         </div>
                     </header>
 
                     {/* --- 頂部折疊式檢核任務面板 (HUD) --- */}
                     {quizOpen && (
-                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-indigo-500 px-4 py-3 z-20 shrink-0 max-h-[48vh] overflow-y-auto animate-fadeIn">
+                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-indigo-500 px-3 py-2.5 z-20 shrink-0 max-h-[36vh] overflow-y-auto animate-fadeIn">
                             <div className="max-w-4xl mx-auto">
                                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-indigo-100">
                                     <div className="flex items-center gap-1.5">
@@ -1111,10 +1110,10 @@
                         </div>
                     )}
 
-                    {/* --- 主畫面：左側精簡參數控制 + 右側 100% 3D 畫布 --- */}
-                    <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+                    {/* --- 主畫面：左側精簡參數控制 + 右側 100% 3D 畫布 (iPad 友善並列排版) --- */}
+                    <div className="flex-1 flex flex-row overflow-hidden relative">
                         {/* 左側：精簡參數面板 */}
-                        <div className="w-full md:w-72 bg-white/95 backdrop-blur-md border-r border-slate-200 flex flex-col overflow-y-auto p-3 text-xs shrink-0 order-2 md:order-1 max-h-[35vh] md:max-h-full">
+                        <div className="w-56 sm:w-64 md:w-72 bg-white/95 backdrop-blur-md border-r border-slate-200 flex flex-col overflow-y-auto p-2.5 sm:p-3 text-xs shrink-0 max-h-full">
                             <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
                                 <span className="font-bold text-slate-700 flex items-center gap-1.5">
                                     <IconSettings /> 幾何參數控制
@@ -1241,7 +1240,7 @@
                         </div>
 
                         {/* 右側：3D 畫布與底部觸控輔助 (清爽高對比幾何格紙背景，清晰呈現形體顏色與邊線) */}
-                        <div className="flex-1 relative bg-slate-100 overflow-hidden flex flex-col order-1 md:order-2">
+                        <div className="flex-1 relative bg-slate-100 overflow-hidden flex flex-col">
                             <svg 
                                 ref={svgRef}
                                 viewBox="0 0 800 600" 
@@ -1253,7 +1252,7 @@
                                 onWheel={handleWheel}
                                 onTouchStart={handleTouchStart}
                                 onTouchMove={handleTouchMove}
-                                onTouchEnd={handleMouseUp}
+                                onTouchEnd={handleTouchEnd}
                             >
                                 <defs>
                                     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">

@@ -16,9 +16,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
         body {
             font-family: 'Microsoft JhengHei', 'Segoe UI', Roboto, sans-serif;
-            background-color: #f0f9ff;
+            background-color: #020617;
         }
         input[type=range] {
             accent-color: #4f46e5;
@@ -33,9 +42,9 @@
         .cursor-rotate { cursor: alias; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen p-4 flex items-center justify-center">
+<body class="bg-slate-950 w-full h-full overflow-hidden flex flex-col font-sans select-none m-0 p-0">
 
-    <div id="root" class="w-full"></div>
+    <div id="root" class="w-full h-full flex flex-col overflow-hidden"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
@@ -309,18 +318,7 @@
             const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
             const [viewStart, setViewStart] = useState({ x: 0, y: 0 }); 
             const [rotationStart, setRotationStart] = useState({ x: 0, y: 0 });
-            const [isFullscreen, setIsFullscreen] = useState(false);
             const pinchRef = useRef({ dist: 0, scale: 1 });
-
-            useEffect(() => {
-                const checkFs = () => {
-                    const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
-                    setIsFullscreen(isFs);
-                };
-                document.addEventListener('fullscreenchange', checkFs);
-                checkFs();
-                return () => document.removeEventListener('fullscreenchange', checkFs);
-            }, []);
 
             const isSmooth = shapeType === 'cylinder' || shapeType === 'cone';
             const renderSides = isSmooth ? 32 : sides;
@@ -628,10 +626,10 @@
             };
 
             return (
-                <div className="w-screen h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
-                    {/* --- 頂部精簡導航與下拉選單工具列 (保留安全高度避開 iPad 狀態列) --- */}
+                <div className="w-full h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
+                    {/* --- 頂部精簡導航與下拉選單工具列 (適合 iPad 閱讀模式) --- */}
                     <header 
-                        style={{ paddingTop: 'max(10px, env(safe-area-inset-top, 24px))', paddingBottom: '8px' }}
+                        style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: '6px' }}
                         className="min-h-[52px] bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 md:px-4 flex items-center justify-between z-30 shrink-0 gap-2"
                     >
                         {/* 左側：形狀與展開圖樣式下拉選單 */}
@@ -795,35 +793,12 @@
                                 <span>📝 檢核任務 (題 {quizStep + 1}/5)</span>
                                 <span>{quizOpen ? '▲ 收合' : '▼ 展開'}</span>
                             </button>
-
-                            {/* 全螢幕切換按鈕 (清楚文字與圖示) */}
-                            <button 
-                                onClick={() => {
-                                    const isFs = !!(document.fullscreenElement || window.parent?.document?.fullscreenElement);
-                                    if (!isFs) {
-                                        if (document.documentElement.requestFullscreen) {
-                                            document.documentElement.requestFullscreen().catch(() => {});
-                                        }
-                                        try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
-                                    } else {
-                                        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-                                        if (window.parent?.document?.exitFullscreen) window.parent.document.exitFullscreen().catch(() => {});
-                                        try { window.parent.postMessage({ type: "TOGGLE_FULLSCREEN" }, "*"); } catch(e) {}
-                                    }
-                                }} 
-                                className={`px-3 py-1.5 border rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${isFullscreen ? "bg-slate-700 border-slate-500 text-amber-300 ring-1 ring-amber-300" : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"}`}
-                                title={isFullscreen ? "縮回原始視窗" : "全螢幕檢視"}
-                                id="btnFullscreen"
-                            >
-                                <span className="text-sm">{isFullscreen ? "⤓" : "⛶"}</span>
-                                <span>{isFullscreen ? "縮回視窗" : "全螢幕"}</span>
-                            </button>
                         </div>
                     </header>
 
                     {/* --- 頂部折疊式檢核任務面板 (HUD) --- */}
                     {quizOpen && (
-                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-purple-500 px-4 py-3 z-20 shrink-0 max-h-[50vh] overflow-y-auto animate-fadeIn">
+                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-purple-500 px-3 py-2.5 z-20 shrink-0 max-h-[38vh] overflow-y-auto animate-fadeIn">
                             <div className="max-w-4xl mx-auto">
                                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-purple-100">
                                     <div className="flex items-center gap-1.5">
