@@ -2,7 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="幾何形體任你玩">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <script>window.APP_ASSETS_PATH = "";</script>
+    <script src="app-mode.js"></script>
     <title>3D 立體圖形實驗室 (3D Geometry Lab)</title>
     
     <!-- 引入 React 和 ReactDOM -->
@@ -143,6 +150,8 @@
             const [quizFeedback, setQuizFeedback] = useState(null);
             const [quizCompleted, setQuizCompleted] = useState(false);
             const [isFullscreen, setIsFullscreen] = useState(false);
+            const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+            const [addShapeSelectVal, setAddShapeSelectVal] = useState("");
 
             useEffect(() => {
                 const checkFs = () => {
@@ -180,52 +189,66 @@
                 };
             }, []);
 
+            const [progress, setProgress] = useState(() => {
+                try {
+                    return JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                } catch(e) {
+                    return { done: [], best: null };
+                }
+            });
+
+            // 監聽原生全螢幕變化事件，同步更新狀態
+            useEffect(() => {
+                const onFsChange = () => {
+                    const hasFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+                    setIsFullscreen(hasFs);
+                };
+                document.addEventListener('fullscreenchange', onFsChange);
+                document.addEventListener('webkitfullscreenchange', onFsChange);
+                return () => {
+                    document.removeEventListener('fullscreenchange', onFsChange);
+                    document.removeEventListener('webkitfullscreenchange', onFsChange);
+                };
+            }, []);
+
             const toggleFullscreen = () => {
-                const parentDoc = (window.parent && window.parent !== window) ? window.parent.document : null;
-                const isFs = !!(
-                    document.fullscreenElement || 
-                    document.webkitFullscreenElement ||
-                    (parentDoc && (parentDoc.fullscreenElement || parentDoc.webkitFullscreenElement))
-                );
-
-                const requestFs = (doc) => {
-                    const el = doc.documentElement;
-                    if (el.requestFullscreen) return el.requestFullscreen();
-                    if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
-                    if (el.mozRequestFullScreen) return el.mozRequestFullScreen();
-                    if (el.msRequestFullscreen) return el.msRequestFullscreen();
-                };
-
-                const exitFs = (doc) => {
-                    if (doc.exitFullscreen) return doc.exitFullscreen();
-                    if (doc.webkitExitFullscreen) return doc.webkitExitFullscreen();
-                    if (doc.mozCancelFullScreen) return doc.mozCancelFullScreen();
-                    if (doc.msExitFullscreen) return doc.msExitFullscreen();
-                };
+                const isFs = isFullscreen || !!(document.fullscreenElement || document.webkitFullscreenElement);
 
                 if (!isFs) {
-                    let requested = false;
-                    if (parentDoc) {
-                        try {
-                            const p = requestFs(parentDoc);
-                            if (p && p.catch) {
-                                p.catch(() => {
-                                    try { requestFs(document); } catch (e) {}
-                                });
-                            }
-                            requested = true;
-                        } catch (e) {}
+                    // 1. 同步切換 CSS 滿版沉浸全螢幕 (保證手機 Chrome / iOS Safari 第一時間 100% 滿版無干擾)
+                    setIsFullscreen(true);
+                    // 2. 嘗試呼叫瀏覽器原生全螢幕
+                    try {
+                        const el = document.documentElement;
+                        const req = el.requestFullscreen || el.webkitRequestFullscreen;
+                        if (req) {
+                            const p = req.call(el);
+                            if (p && p.catch) p.catch(() => {});
+                        }
+                    } catch(e) {}
+                    try {
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({ type: "ENTER_FULLSCREEN" }, "*");
+                        }
+                    } catch(e) {}
+                    // 3. 在 iOS 瀏覽器中且未安裝為獨立 App，彈出 App 模式引導
+                    if (window.isIOSDevice && window.isIOSDevice() && !window.isRunningStandalone()) {
+                        window.showAppModeGuide && window.showAppModeGuide('以 App 模式開啟 100% 全螢幕');
                     }
-                    if (!requested) {
-                        try { requestFs(document); } catch (e) {}
-                    }
-                    try { window.parent.postMessage({ type: "ENTER_FULLSCREEN" }, "*"); } catch(e) {}
                 } else {
-                    if (parentDoc) {
-                        try { exitFs(parentDoc); } catch (e) {}
-                    }
-                    try { exitFs(document); } catch (e) {}
-                    try { window.parent.postMessage({ type: "EXIT_FULLSCREEN" }, "*"); } catch(e) {}
+                    setIsFullscreen(false);
+                    try {
+                        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+                        if (exit && (document.fullscreenElement || document.webkitFullscreenElement)) {
+                            const p = exit.call(document);
+                            if (p && p.catch) p.catch(() => {});
+                        }
+                    } catch(e) {}
+                    try {
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({ type: "EXIT_FULLSCREEN" }, "*");
+                        }
+                    } catch(e) {}
                 }
             };
             // iPad 兩指縮放手勢參照
@@ -432,16 +455,17 @@
             // --- 形體操作 ---
             const addShape = (type) => {
                 const newId = Date.now();
-                // User requested default position (0,0,0)
-                const newShape = {
-                    id: newId,
-                    x: 0, 
-                    z: 0,
-                    colorHue: PASTEL_COLORS[Math.floor(Math.random() * 6)].hue, 
-                    ...DEFAULT_PARAMS[type]
-                };
-                
-                setShapes([...shapes, newShape]);
+                setShapes(prev => {
+                    const offsetX = prev.length > 0 ? (prev.length % 2 === 1 ? 12 : -12) : 0;
+                    const newShape = {
+                        id: newId,
+                        x: offsetX, 
+                        z: 0,
+                        colorHue: PASTEL_COLORS[Math.floor(Math.random() * 6)].hue, 
+                        ...DEFAULT_PARAMS[type]
+                    };
+                    return [...prev, newShape];
+                });
                 setSelectedShapeId(newId);
                 setInteractionMode('moveItem'); 
             };
@@ -853,104 +877,111 @@
                 );
             };
 
-            // 導覽跳轉邏輯 (支援回首頁與跨關卡切換)
+            // 導覽跳轉邏輯 (支援回首頁與跨關卡切換，遵守破關解鎖限制)
             const handleNavigate = (val) => {
+                const isFromMobile = sessionStorage.getItem('geo_mode') === 'mobile' || document.referrer.includes('mobile.html');
+                const homeUrl = isFromMobile ? '../mobile.html' : '../index.html';
+                const quizUrl = isFromMobile ? '../mobile.html#quizCard' : '../index.html';
+
+                // 解鎖狀態檢核
+                const isS2Unlocked = progress.done.includes('s1');
+                const isS3Unlocked = progress.done.includes('s2');
+                const isQuizUnlocked = progress.done.includes('s1') && progress.done.includes('s2') && progress.done.includes('s3');
+
                 if (val === 'home') {
                     if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_HOME' }, '*');
-                    } else {
-                        window.location.href = '../index.html';
+                        try { window.parent.postMessage({ type: 'NAVIGATE_HOME' }, '*'); } catch(e) {}
                     }
+                    window.location.href = homeUrl;
                 } else if (val === 'quiz') {
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 'quiz' }, '*');
-                    } else {
-                        window.location.href = '../index.html';
+                    if (!isQuizUnlocked) {
+                        alert('🔒 尚未解鎖！請依序通過第 1、2、3 關檢核挑戰後才能進行總測驗！');
+                        return;
                     }
+                    if (window.parent && window.parent !== window) {
+                        try { window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 'quiz' }, '*'); } catch(e) {}
+                    }
+                    window.location.href = quizUrl;
                 } else if (val === 's2') {
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's2' }, '*');
-                    } else {
-                        window.location.href = 'geometry_shapes.html';
+                    if (!isS2Unlocked) {
+                        alert('🔒 尚未解鎖！請先完成第 1 關的底面與表面特性檢核任務才能前往第 2 關！');
+                        return;
                     }
+                    if (window.parent && window.parent !== window) {
+                        try { window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's2' }, '*'); } catch(e) {}
+                    }
+                    window.location.href = 'geometry_shapes.html';
                 } else if (val === 's3') {
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's3' }, '*');
-                    } else {
-                        window.location.href = 'interactive_sphere.html';
+                    if (!isS3Unlocked) {
+                        alert('🔒 尚未解鎖！請先依序完成第 1 關與第 2 關才能前往第 3 關！');
+                        return;
                     }
+                    if (window.parent && window.parent !== window) {
+                        try { window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's3' }, '*'); } catch(e) {}
+                    }
+                    window.location.href = 'interactive_sphere.html';
                 }
             };
 
+            const isS2Unlocked = progress.done.includes('s1');
+            const isS3Unlocked = progress.done.includes('s2');
+            const isQuizUnlocked = progress.done.includes('s1') && progress.done.includes('s2') && progress.done.includes('s3');
+
             return (
-                <div className="w-full h-full flex flex-col bg-slate-950 overflow-hidden font-sans select-none">
-                    {/* --- 頂部固定工具列 (單行防換行，適配 iPad 橫向/直向) --- */}
+                <div className={`${isFullscreen ? "fixed inset-0 z-50 w-screen h-[100dvh]" : "w-full h-[100dvh]"} flex flex-col bg-slate-950 overflow-hidden font-sans select-none`}>
+                    {/* --- 頂部固定工具列 (單行防換行，適配 iPad 橫向/直向與手機) --- */}
                     <header 
                         style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: '6px' }} 
-                        className="bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 text-white z-30 shrink-0 min-h-[48px]"
+                        className="bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex flex-nowrap items-center justify-between gap-1 sm:gap-2 text-white z-30 shrink-0 min-h-[48px]"
                     >
-                        {/* 左側：形體新增快速按鈕組 */}
-                        <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-[11px] font-bold text-slate-400 hidden xl:inline">新增：</span>
-                            <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-800/90 p-0.5 sm:p-1 rounded-lg border border-slate-700">
-                                <button onClick={() => addShape("prism")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增角柱">
-                                    + 角柱
-                                </button>
-                                <button onClick={() => addShape("pyramid")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增角錐">
-                                    + 角錐
-                                </button>
-                                <button onClick={() => addShape("cylinder")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增圓柱">
-                                    + 圓柱
-                                </button>
-                                <button onClick={() => addShape("cone")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增圓錐">
-                                    + 圓錐
-                                </button>
-                                <button onClick={() => addShape("sphere")} className="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs font-bold bg-slate-700/70 hover:bg-indigo-600 text-slate-100 rounded transition-colors whitespace-nowrap" title="新增球體">
-                                    + 球體
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 中間：關卡快速切換 下拉選單 */}
-                        <div className="flex items-center bg-slate-800/95 border border-indigo-500/70 rounded-lg px-2 py-1 shadow-sm shrink-0">
+                        {/* 左側：形體新增下拉選單 (取代原本佔滿版面的 5 個按鈕，手機版 100% 免滑動) */}
+                        <div className="flex items-center bg-indigo-950/90 border border-indigo-500/80 rounded-lg px-2 py-1 shadow-sm shrink-0">
                             <select
-                                value="s1"
-                                onChange={(e) => handleNavigate(e.target.value)}
-                                className="bg-transparent text-amber-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
-                                id="levelNavSelect"
+                                value={addShapeSelectVal}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val) {
+                                        addShape(val);
+                                    }
+                                    setAddShapeSelectVal("");
+                                }}
+                                className="bg-transparent text-indigo-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
+                                id="addShapeSelect"
+                                title="選擇並新增形體"
                             >
-                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 回到學習地圖</option>
-                                <option value="s1" className="bg-slate-800 text-white font-bold">📍 第 1 關：柱體與錐體 (目前)</option>
-                                <option value="s2" className="bg-slate-800 text-white">第 2 關：展開圖與組合</option>
-                                <option value="s3" className="bg-slate-800 text-white">第 3 關：認識球</option>
-                                <option value="quiz" className="bg-slate-800 text-yellow-300">★ 總測驗挑戰</option>
+                                <option value="" disabled className="bg-slate-800 text-indigo-300">＋ 新增形體 ▾</option>
+                                <option value="prism" className="bg-slate-800 text-white">＋ 角柱 (Prism)</option>
+                                <option value="pyramid" className="bg-slate-800 text-white">＋ 角錐 (Pyramid)</option>
+                                <option value="cylinder" className="bg-slate-800 text-white">＋ 圓柱 (Cylinder)</option>
+                                <option value="cone" className="bg-slate-800 text-white">＋ 圓錐 (Cone)</option>
+                                <option value="sphere" className="bg-slate-800 text-white">＋ 球體 (Sphere)</option>
                             </select>
                         </div>
 
-                        {/* 右側：視角操作切換、重置視角、檢核開關 */}
+                        {/* 中間：關卡快速切換 下拉選單 (破關解鎖狀態同步顯示) */}
+                        <div className="flex items-center bg-slate-800/95 border border-indigo-500/70 rounded-lg px-1.5 sm:px-2 py-1 shadow-sm shrink-0">
+                            <select
+                                value="s1"
+                                onChange={(e) => handleNavigate(e.target.value)}
+                                className="bg-transparent text-amber-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1 max-w-[125px] sm:max-w-none"
+                                id="levelNavSelect"
+                            >
+                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 學習地圖</option>
+                                <option value="s1" className="bg-slate-800 text-white font-bold">📍 關卡 1 (目前)</option>
+                                <option value="s2" className="bg-slate-800 text-white">{isS2Unlocked ? "關卡 2：展開圖" : "🔒 關卡 2 (需破關)"}</option>
+                                <option value="s3" className="bg-slate-800 text-white">{isS3Unlocked ? "關卡 3：球體" : "🔒 關卡 3 (需破關)"}</option>
+                                <option value="quiz" className="bg-slate-800 text-yellow-300">{isQuizUnlocked ? "★ 總測驗" : "🔒 ★ 總測驗"}</option>
+                            </select>
+                        </div>
+
+                        {/* 右側：重置視角、檢核開關、全螢幕 */}
                         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                            <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-xs">
-                                <button 
-                                    onClick={() => setInteractionMode("rotate")}
-                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === "rotate" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
-                                    title="旋轉視角"
-                                >
-                                    旋轉
-                                </button>
-                                <button 
-                                    onClick={() => setInteractionMode("pan")}
-                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === "pan" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
-                                    title="平移視角"
-                                >
-                                    平移
-                                </button>
-                            </div>
                             <button 
                                 onClick={resetView} 
-                                className="px-2 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+                                className="px-1.5 sm:px-2 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
                                 title="重置視角"
                             >
-                                ↺ 重置
+                                ↺ <span className="hidden sm:inline">重置</span>
                             </button>
 
                             {/* 頂部檢核任務切換按鈕 */}
@@ -959,19 +990,19 @@
                                 className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md whitespace-nowrap ${quizOpen ? "bg-purple-600 text-white ring-2 ring-purple-300" : "bg-purple-700/80 text-purple-100 hover:bg-purple-600"}`}
                                 id="toggleQuizBtn"
                             >
-                                <span>🎯 檢核 ({quizStep + 1}/4)</span>
+                                <span>🎯 <span className="hidden sm:inline">檢核 </span>({quizStep + 1}/4)</span>
                                 <span>{quizOpen ? "▲" : "▼"}</span>
                             </button>
 
                             {/* 全螢幕切換按鈕 */}
                             <button 
                                 onClick={toggleFullscreen}
-                                className={`px-2 sm:px-2.5 py-1 border rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm whitespace-nowrap ${isFullscreen ? "bg-slate-700 border-slate-500 text-amber-300 ring-1 ring-amber-300" : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"}`}
+                                className={`px-1.5 sm:px-2.5 py-1 border rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm whitespace-nowrap ${isFullscreen ? "bg-slate-700 border-slate-500 text-amber-300 ring-1 ring-amber-300" : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"}`}
                                 title={isFullscreen ? "縮回原始視窗" : "全螢幕檢視"}
                                 id="btnFullscreen"
                             >
                                 <span>{isFullscreen ? "⤓" : "⛶"}</span>
-                                <span>{isFullscreen ? "縮回視窗" : "全螢幕"}</span>
+                                <span className="hidden sm:inline">{isFullscreen ? "縮回" : "全螢幕"}</span>
                             </button>
                         </div>
                     </header>
@@ -1164,9 +1195,20 @@
                                                 {quizCompleted && (
                                                     <button 
                                                         onClick={() => {
-                                                            if (window.parent) {
-                                                                window.parent.postMessage({ type: "GO_NEXT_STEP", currentStepId: "s1" }, "*");
-                                                            }
+                                                            try {
+                                                                const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                                                                if (!p.done.includes('s1')) {
+                                                                    p.done.push('s1');
+                                                                    localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
+                                                                }
+                                                                setProgress(p);
+                                                                if (window.parent && window.parent !== window) {
+                                                                    window.parent.postMessage({ type: "GO_NEXT_STEP", currentStepId: "s1" }, "*");
+                                                                    window.parent.postMessage({ type: "NAVIGATE_STEP", stepId: "s2" }, "*");
+                                                                }
+                                                            } catch(e) {}
+                                                            // 直連或手機瀏覽直接導航
+                                                            window.location.href = 'geometry_shapes.html';
                                                         }}
                                                         className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-xs font-bold shadow-md hover:brightness-110 active:scale-95 shrink-0"
                                                     >
@@ -1183,14 +1225,23 @@
 
                     {/* --- 主畫面：左側精簡參數控制 + 右側 100% 3D 畫布 (iPad 友善並列排版) --- */}
                     <div className="flex-1 flex flex-row overflow-hidden relative">
-                        {/* 左側：精簡參數面板 */}
-                        <div className="w-56 sm:w-64 md:w-72 bg-white/95 backdrop-blur-md border-r border-slate-200 flex flex-col overflow-y-auto p-2.5 sm:p-3 text-xs shrink-0 max-h-full">
-                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
-                                <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                                    <IconSettings /> 幾何參數控制
-                                </span>
-                                <span className="text-[11px] text-slate-400">物件: {shapes.length} 個</span>
-                            </div>
+                        {/* 左側：精簡參數面板 (手機端支援浮動展開/收合，釋放 3D 空間) */}
+                        {sidebarOpen && (
+                            <div className="w-64 sm:w-64 md:w-72 bg-white/95 backdrop-blur-md border-r border-slate-200 flex flex-col overflow-y-auto p-2.5 sm:p-3 text-xs shrink-0 max-h-full absolute sm:relative z-20 left-0 top-0 bottom-0 shadow-2xl sm:shadow-none animate-fadeIn">
+                                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                                    <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                                        <IconSettings /> 幾何參數控制
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] text-slate-400">物件: {shapes.length} 個</span>
+                                        <button 
+                                            onClick={() => setSidebarOpen(false)}
+                                            className="sm:hidden px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded font-bold text-xs"
+                                        >
+                                            ✕ 關閉
+                                        </button>
+                                    </div>
+                                </div>
 
                             {selectedShape ? (
                                 <div className="space-y-3.5 flex-1">
@@ -1309,6 +1360,18 @@
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                        {/* 手機/平板端浮動參數展開按鈕 (當面板收合時顯示，避免擋住 3D 畫布) */}
+                        {!sidebarOpen && (
+                            <button
+                                onClick={() => setSidebarOpen(true)}
+                                className="absolute bottom-4 left-4 z-20 px-3 py-2 bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 rounded-xl text-xs font-bold shadow-xl flex items-center gap-1.5 backdrop-blur-md transition-all active:scale-95"
+                                title="開啟參數控制面板"
+                            >
+                                <IconSettings /> <span>⚙️ 參數控制</span>
+                            </button>
+                        )}
 
                         {/* 右側：3D 畫布與底部觸控輔助 (清爽高對比幾何格紙背景，清晰呈現形體顏色與邊線) */}
                         <div className="flex-1 relative bg-slate-100 overflow-hidden flex flex-col">
@@ -1361,73 +1424,93 @@
                                 </g>
                             </svg>
 
-                            {/* --- iPad 專屬直覺操作列 + 貼心操作提示 (置底浮動卡片，絕不擋住形體) --- */}
-                            <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-col items-center gap-2 pointer-events-none">
-                                {/* iPad 貼心操作提示 (呈現在下方物件控制列上方，直觀易見) */}
+                            {/* --- 直覺操作列 + 貼心操作提示 (置底浮動卡片，適配 iOS Safari 全螢幕與 Safe Area，橫向捲動絕不消失) --- */}
+                            <div 
+                                style={{ bottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
+                                className="absolute left-2 right-2 sm:left-3 sm:right-3 z-30 flex flex-col items-center gap-1.5 pointer-events-none"
+                            >
+                                {/* iPad / 手機貼心操作提示 */}
                                 {quizOpen && (quizStep === 0 || quizStep === 1) && (
-                                    <div className="pointer-events-auto bg-amber-500 text-slate-950 font-bold px-3.5 py-1.5 rounded-xl shadow-xl border border-amber-300 text-xs flex items-center gap-1.5 backdrop-blur-md animate-fadeIn">
-                                        <span>💡 <b>iPad 貼心操作：</b>點擊下方【👀 看上底】或【👀 看下底】可自動翻轉柱體，輕點即可直接選取底面！</span>
+                                    <div className="pointer-events-auto bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl shadow-xl border border-amber-300 text-xs flex items-center gap-1.5 backdrop-blur-md animate-fadeIn">
+                                        <span>💡 點擊【👀 看上底/下底】自動翻轉；👉 向右滑動工具列可使用旋轉與微調！</span>
                                     </div>
                                 )}
 
-                                <div className="w-full flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-                                    <div className="pointer-events-auto flex items-center flex-wrap gap-1.5 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-2xl shadow-xl border border-slate-700 text-white">
-                                    <span className="text-[11px] font-bold text-slate-400 mr-1 hidden sm:inline">視角切換：</span>
-                                    <button
-                                        onClick={() => setCameraPreset("top")}
-                                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition-all"
-                                        title="一鍵俯視，清楚點選上底面"
+                                {/* 單行橫向捲動操作列 (附帶右側醒目滑動引導，解決使用者不知道旁邊有功能的問題) */}
+                                <div className="w-full flex items-center justify-center pointer-events-none max-w-full relative">
+                                    <div 
+                                        id="shapeToolbar" 
+                                        className="pointer-events-auto flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md px-2.5 py-1.5 rounded-2xl shadow-2xl border border-slate-700 text-white max-w-full overflow-x-auto no-scrollbar scroll-smooth"
                                     >
-                                        👀 看上底
-                                    </button>
-                                    <button
-                                        onClick={() => setCameraPreset("bottom")}
-                                        className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition-all"
-                                        title="一鍵仰視，清楚點選下底面"
-                                    >
-                                        👀 看下底
-                                    </button>
-                                    <button
-                                        onClick={() => setCameraPreset("left")}
-                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all"
-                                        title="向左轉 30 度"
-                                    >
-                                        ↺ 左轉
-                                    </button>
-                                    <button
-                                        onClick={() => setCameraPreset("right")}
-                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all"
-                                        title="向右轉 30 度"
-                                    >
-                                        ↻ 右轉
-                                    </button>
-                                    <button
-                                        onClick={() => setAutoRotate(prev => !prev)}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 ${autoRotate ? "bg-indigo-600 text-white ring-2 ring-indigo-300 animate-pulse" : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"}`}
-                                        title="形體自動緩慢自轉"
-                                    >
-                                        {autoRotate ? "⏸️ 停止自轉" : "▶️ 自動自轉"}
-                                    </button>
-                                    <button
-                                        onClick={() => setCameraPreset("reset")}
-                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 transition-all"
-                                        title="重置為標準 3D 視角"
-                                    >
-                                        ↺ 重置視角
-                                    </button>
-                                </div>
+                                        <span className="text-[11px] font-bold text-slate-400 mr-0.5 hidden md:inline whitespace-nowrap">視角：</span>
+                                        <button
+                                            onClick={() => setCameraPreset("top")}
+                                            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1 transition-all whitespace-nowrap shrink-0"
+                                            title="一鍵俯視，清楚點選上底面"
+                                            id="btnLookTop"
+                                        >
+                                            👀 看上底
+                                        </button>
+                                        <button
+                                            onClick={() => setCameraPreset("bottom")}
+                                            className="px-2.5 py-1.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1 transition-all whitespace-nowrap shrink-0"
+                                            title="一鍵仰視，清楚點選下底面"
+                                            id="btnLookBottom"
+                                        >
+                                            👀 看下底
+                                        </button>
+                                        <button
+                                            onClick={() => setCameraPreset("left")}
+                                            className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all whitespace-nowrap shrink-0"
+                                            title="向左轉 30 度"
+                                        >
+                                            ↺ 左轉
+                                        </button>
+                                        <button
+                                            onClick={() => setCameraPreset("right")}
+                                            className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all whitespace-nowrap shrink-0"
+                                            title="向右轉 30 度"
+                                        >
+                                            ↻ 右轉
+                                        </button>
+                                        <button
+                                            onClick={() => setAutoRotate(prev => !prev)}
+                                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 whitespace-nowrap shrink-0 ${autoRotate ? "bg-indigo-600 text-white ring-2 ring-indigo-300" : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"}`}
+                                            title="形體自動自轉"
+                                        >
+                                            {autoRotate ? "⏸️ 停止" : "▶️ 自轉"}
+                                        </button>
+                                        <button
+                                            onClick={() => setCameraPreset("reset")}
+                                            className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 transition-all whitespace-nowrap shrink-0"
+                                            title="重置為標準 3D 視角"
+                                        >
+                                            ↺ 重置
+                                        </button>
 
-                                {/* 形體位置微調快捷鍵 */}
-                                <div className="pointer-events-auto flex items-center gap-1 bg-slate-900/90 backdrop-blur-md px-2.5 py-2 rounded-2xl shadow-xl border border-slate-700 text-white">
-                                    <span className="text-[11px] font-bold text-slate-400 mr-1 hidden sm:inline">微調：</span>
-                                    <button onClick={() => nudgeShape(-15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向左移">←</button>
-                                    <button onClick={() => nudgeShape(15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向右移">→</button>
-                                    <button onClick={() => nudgeShape(0, 15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向上升">↑</button>
-                                    <button onClick={() => nudgeShape(0, -15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向下降">↓</button>
-                                    <button onClick={resetShapePos} className="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 active:scale-95 rounded-lg text-xs font-bold border border-indigo-700 ml-1" title="讓物件回歸中間 (0,0)">🎯 置中</button>
+                                        {/* 微調方向鍵 (在窄螢幕緊隨其後，橫向滑動即可直接點選) */}
+                                        <div className="flex items-center gap-1 pl-1 border-l border-slate-700 shrink-0">
+                                            <button onClick={() => nudgeShape(-15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向左移">←</button>
+                                            <button onClick={() => nudgeShape(15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向右移">→</button>
+                                            <button onClick={() => nudgeShape(0, 15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向上升">↑</button>
+                                            <button onClick={() => nudgeShape(0, -15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向下降">↓</button>
+                                            <button onClick={resetShapePos} className="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 active:scale-95 rounded-lg text-xs font-bold border border-indigo-700" title="置中">🎯</button>
+                                        </div>
+
+                                        {/* 醒目的滑動引導按鈕：點擊自動向右平滑滾動，帶動態呼吸效果 */}
+                                        <button
+                                            onClick={() => {
+                                                const el = document.getElementById('shapeToolbar');
+                                                if (el) el.scrollBy({ left: 160, behavior: 'smooth' });
+                                            }}
+                                            className="px-2 py-1 bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 rounded-lg text-[11px] font-bold border border-amber-400/40 shrink-0 flex items-center gap-0.5 animate-pulse cursor-pointer transition-all ml-1"
+                                            title="向右滑動查看更多微調按鈕"
+                                        >
+                                            滑動更多 ❯
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         </div>
                     </div>
                 </div>

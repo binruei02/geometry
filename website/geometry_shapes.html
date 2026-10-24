@@ -2,7 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="幾何形體任你玩">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <script>window.APP_ASSETS_PATH = "";</script>
+    <script src="app-mode.js"></script>
     <title>立體圖形展開與組合 (3D Shape Unfolding)</title>
     
     <!-- 引入 React 和 ReactDOM -->
@@ -334,52 +341,69 @@
                 };
             }, []);
 
+            const [progress, setProgress] = useState(() => {
+                try {
+                    return JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                } catch(e) {
+                    return { done: [], best: null };
+                }
+            });
+
+            // 手機版拓撲位置卡片折疊狀態 (手機端預設折疊，避免遮擋中央展開圖)
+            const [topoOpen, setTopoOpen] = useState(false);
+
+            // 監聽原生全螢幕事件，同步狀態
+            useEffect(() => {
+                const onFsChange = () => {
+                    const hasFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+                    setIsFullscreen(hasFs);
+                };
+                document.addEventListener('fullscreenchange', onFsChange);
+                document.addEventListener('webkitfullscreenchange', onFsChange);
+                return () => {
+                    document.removeEventListener('fullscreenchange', onFsChange);
+                    document.removeEventListener('webkitfullscreenchange', onFsChange);
+                };
+            }, []);
+
             const toggleFullscreen = () => {
-                const parentDoc = (window.parent && window.parent !== window) ? window.parent.document : null;
-                const isFs = !!(
-                    document.fullscreenElement || 
-                    document.webkitFullscreenElement ||
-                    (parentDoc && (parentDoc.fullscreenElement || parentDoc.webkitFullscreenElement))
-                );
-
-                const requestFs = (doc) => {
-                    const el = doc.documentElement;
-                    if (el.requestFullscreen) return el.requestFullscreen();
-                    if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
-                    if (el.mozRequestFullScreen) return el.mozRequestFullScreen();
-                    if (el.msRequestFullscreen) return el.msRequestFullscreen();
-                };
-
-                const exitFs = (doc) => {
-                    if (doc.exitFullscreen) return doc.exitFullscreen();
-                    if (doc.webkitExitFullscreen) return doc.webkitExitFullscreen();
-                    if (doc.mozCancelFullScreen) return doc.mozCancelFullScreen();
-                    if (doc.msExitFullscreen) return doc.msExitFullscreen();
-                };
+                const isFs = isFullscreen || !!(document.fullscreenElement || document.webkitFullscreenElement);
 
                 if (!isFs) {
-                    let requested = false;
-                    if (parentDoc) {
-                        try {
-                            const p = requestFs(parentDoc);
-                            if (p && p.catch) {
-                                p.catch(() => {
-                                    try { requestFs(document); } catch (e) {}
-                                });
-                            }
-                            requested = true;
-                        } catch (e) {}
+                    // 1. 同步切換內部 CSS 沉浸模式 (保證手機 Chrome / iOS Safari 第一時間 100% 滿版無干擾)
+                    setIsFullscreen(true);
+                    // 2. 嘗試呼叫瀏覽器原生全螢幕
+                    try {
+                        const el = document.documentElement;
+                        const req = el.requestFullscreen || el.webkitRequestFullscreen;
+                        if (req) {
+                            const p = req.call(el);
+                            if (p && p.catch) p.catch(() => {});
+                        }
+                    } catch(e) {}
+                    try {
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({ type: "ENTER_FULLSCREEN" }, "*");
+                        }
+                    } catch(e) {}
+                    // 3. 在 iOS 瀏覽器中且未安裝為獨立 App，彈出 App 模式引導
+                    if (window.isIOSDevice && window.isIOSDevice() && !window.isRunningStandalone()) {
+                        window.showAppModeGuide && window.showAppModeGuide('以 App 模式開啟 100% 全螢幕');
                     }
-                    if (!requested) {
-                        try { requestFs(document); } catch (e) {}
-                    }
-                    try { window.parent.postMessage({ type: "ENTER_FULLSCREEN" }, "*"); } catch(e) {}
                 } else {
-                    if (parentDoc) {
-                        try { exitFs(parentDoc); } catch (e) {}
-                    }
-                    try { exitFs(document); } catch (e) {}
-                    try { window.parent.postMessage({ type: "EXIT_FULLSCREEN" }, "*"); } catch(e) {}
+                    setIsFullscreen(false);
+                    try {
+                        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+                        if (exit && (document.fullscreenElement || document.webkitFullscreenElement)) {
+                            const p = exit.call(document);
+                            if (p && p.catch) p.catch(() => {});
+                        }
+                    } catch(e) {}
+                    try {
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({ type: "EXIT_FULLSCREEN" }, "*");
+                        }
+                    } catch(e) {}
                 }
             };
 
@@ -395,6 +419,7 @@
             
             const [animationProgress, setAnimationProgress] = useState(0);
             const [isAnimating, setIsAnimating] = useState(false);
+            const [animBarOpen, setAnimBarOpen] = useState(window.innerWidth >= 640);
 
             // 視圖狀態
             const [interactionMode, setInteractionMode] = useState('rotate'); 
@@ -683,46 +708,60 @@
                 });
             };
 
-            // 導覽跳轉邏輯 (支援回首頁與跨關卡切換)
+            // 導覽跳轉邏輯 (支援回首頁與跨關卡切換，遵守破關解鎖規則)
             const handleNavigate = (val) => {
+                const isFromMobile = sessionStorage.getItem('geo_mode') === 'mobile' || document.referrer.includes('mobile.html');
+                const homeUrl = isFromMobile ? '../mobile.html' : '../index.html';
+                const quizUrl = isFromMobile ? '../mobile.html#quizCard' : '../index.html';
+
+                const isS3Unlocked = progress.done.includes('s2');
+                const isQuizUnlocked = progress.done.includes('s1') && progress.done.includes('s2') && progress.done.includes('s3');
+
                 if (val === 'home') {
                     if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_HOME' }, '*');
-                    } else {
-                        window.location.href = '../index.html';
+                        try { window.parent.postMessage({ type: 'NAVIGATE_HOME' }, '*'); } catch(e) {}
                     }
+                    window.location.href = homeUrl;
                 } else if (val === 'quiz') {
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 'quiz' }, '*');
-                    } else {
-                        window.location.href = '../index.html';
+                    if (!isQuizUnlocked) {
+                        alert('🔒 尚未解鎖！請依序完成第 2 關與第 3 關檢核後才能進行總測驗！');
+                        return;
                     }
+                    if (window.parent && window.parent !== window) {
+                        try { window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 'quiz' }, '*'); } catch(e) {}
+                    }
+                    window.location.href = quizUrl;
                 } else if (val === 's1') {
                     if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's1' }, '*');
-                    } else {
-                        window.location.href = 'shape_comparison.html';
+                        try { window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's1' }, '*'); } catch(e) {}
                     }
+                    window.location.href = 'shape_comparison.html';
                 } else if (val === 's3') {
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's3' }, '*');
-                    } else {
-                        window.location.href = 'interactive_sphere.html';
+                    if (!isS3Unlocked) {
+                        alert('🔒 尚未解鎖！請先完成第 2 關展開圖與組合檢核任務才能前往第 3 關！');
+                        return;
                     }
+                    if (window.parent && window.parent !== window) {
+                        try { window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's3' }, '*'); } catch(e) {}
+                    }
+                    window.location.href = 'interactive_sphere.html';
                 }
             };
 
+            const isS3Unlocked = progress.done.includes('s2');
+            const isQuizUnlocked = progress.done.includes('s1') && progress.done.includes('s2') && progress.done.includes('s3');
+
             return (
-                <div className="w-full h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
-                    {/* --- 頂部精簡導航與下拉選單工具列 (單行防換行，保證邊數與展開樣式完整可見) --- */}
+                <div className={`${isFullscreen ? "fixed inset-0 z-50 w-screen h-[100dvh]" : "w-full h-[100dvh]"} flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none`}>
+                    {/* --- 頂部精簡導航與下拉選單工具列 (單行防換行，手機版全配免滑動) --- */}
                     <header 
                         style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: '6px' }}
-                        className="bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 text-white z-30 shrink-0 min-h-[48px]"
+                        className="bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex flex-nowrap items-center justify-between gap-1 sm:gap-2 text-white z-30 shrink-0 min-h-[48px]"
                     >
-                        {/* 左側：形狀、展開樣式、邊數下拉選單 (完整顯示，絕不被遮擋) */}
-                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        {/* 左側：形狀、展開樣式、邊數下拉選單 */}
+                        <div className="flex items-center gap-1 shrink-0">
                             {/* 形狀選擇下拉選單 */}
-                            <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 sm:px-2 py-1">
+                            <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-1">
                                 <select 
                                     value={shapeType} 
                                     onChange={(e) => { 
@@ -730,21 +769,20 @@
                                         resetPositions(); 
                                         resetView(); 
                                     }}
-                                    className="bg-transparent text-white font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
+                                    className="bg-transparent text-white font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-0.5 max-w-[100px] sm:max-w-none"
                                     id="shapeSelect"
                                 >
                                     <option value="prism" className="bg-slate-800 text-white">🔷 角柱</option>
                                     <option value="cylinder" className="bg-slate-800 text-white">🥫 圓柱</option>
                                     <option value="pyramid" className="bg-slate-800 text-white">🔺 角錐</option>
                                     <option value="cone" className="bg-slate-800 text-white">🍦 圓錐</option>
-                                    <option value="cube" className="bg-slate-800 text-white">🧊 正方體 (11種)</option>
+                                    <option value="cube" className="bg-slate-800 text-white">🧊 正方體</option>
                                 </select>
                             </div>
 
                             {/* 展開圖樣式下拉選單 (根據形狀動態切換) */}
                             {shapeType === 'cube' ? (
-                                <div className="flex items-center bg-indigo-950/80 border border-indigo-700/80 rounded-lg px-1.5 sm:px-2 py-1">
-                                    <span className="text-[11px] text-indigo-300 font-bold whitespace-nowrap hidden lg:inline mr-1">展開:</span>
+                                <div className="flex items-center bg-indigo-950/80 border border-indigo-700/80 rounded-lg px-1.5 py-1">
                                     <select 
                                         value={cubeNetType} 
                                         onChange={(e) => { 
@@ -752,15 +790,15 @@
                                             resetAnimation(); 
                                             resetView(); 
                                         }}
-                                        className="bg-transparent text-indigo-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
+                                        className="bg-transparent text-indigo-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-0.5 max-w-[95px] sm:max-w-none"
                                         id="cubeNetSelect"
                                     >
                                         <optgroup label="1-4-1 型 (6種)" className="bg-slate-800 text-white">
-                                            <option value={0}>型 1：十字型 (1-4-1)</option>
-                                            <option value={1}>型 2：T字型 (1-4-1)</option>
+                                            <option value={0}>型 1：十字型</option>
+                                            <option value={1}>型 2：T字型</option>
                                             <option value={2}>型 3：(1-4-1)</option>
                                             <option value={3}>型 4：(1-4-1)</option>
-                                            <option value={4}>型 5：Z字長型 (1-4-1)</option>
+                                            <option value={4}>型 5：Z字長型</option>
                                             <option value={5}>型 6：(1-4-1)</option>
                                         </optgroup>
                                         <optgroup label="2-3-1 型 (3種)" className="bg-slate-800 text-white">
@@ -769,13 +807,13 @@
                                             <option value={8}>型 9：(2-3-1)</option>
                                         </optgroup>
                                         <optgroup label="2-2-2 型 與 3-3 型" className="bg-slate-800 text-white">
-                                            <option value={9}>型 10：階梯型 (2-2-2)</option>
+                                            <option value={9}>型 10：階梯型</option>
                                             <option value={10}>型 11：(3-3)</option>
                                         </optgroup>
                                     </select>
                                 </div>
                             ) : (shapeType === 'prism' || shapeType === 'pyramid') ? (
-                                <div className="flex items-center bg-blue-950/80 border border-blue-700/80 rounded-lg px-1.5 sm:px-2 py-1">
+                                <div className="flex items-center bg-blue-950/80 border border-blue-700/80 rounded-lg px-1.5 py-1">
                                     <select 
                                         value={shapeType === 'prism' ? prismNetType : pyramidNetType} 
                                         onChange={(e) => { 
@@ -784,7 +822,7 @@
                                             resetPositions(); 
                                             resetView(); 
                                         }}
-                                        className="bg-transparent text-blue-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
+                                        className="bg-transparent text-blue-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-0.5 max-w-[90px] sm:max-w-none"
                                         id="netTypeSelect"
                                     >
                                         {shapeType === 'prism' ? (
@@ -802,10 +840,10 @@
                                 </div>
                             ) : null}
 
-                            {/* 邊數下拉選單 (完整顯示，絕不截斷) */}
+                            {/* 邊數下拉選單 */}
                             {!isSmooth && shapeType !== 'cube' && (
-                                <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 sm:px-2 py-1">
-                                    <span className="text-[11px] text-slate-400 font-bold whitespace-nowrap mr-1">邊數:</span>
+                                <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-1">
+                                    <span className="text-[11px] text-slate-400 font-bold whitespace-nowrap mr-0.5 hidden md:inline">邊數:</span>
                                     <select 
                                         value={sides} 
                                         onChange={(e) => { 
@@ -813,7 +851,7 @@
                                             resetPositions(); 
                                             resetView(); 
                                         }}
-                                        className="bg-transparent text-cyan-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
+                                        className="bg-transparent text-cyan-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-0.5"
                                         id="sidesSelect"
                                     >
                                         <option value={3} className="bg-slate-800 text-white">3 邊</option>
@@ -826,47 +864,30 @@
                             )}
                         </div>
 
-                        {/* 中間：關卡快速切換 下拉選單 */}
-                        <div className="flex items-center bg-slate-800/95 border border-purple-500/70 rounded-lg px-2 py-1 shadow-sm shrink-0">
+                        {/* 中間：關卡快速切換 下拉選單 (破關解鎖狀態同步顯示) */}
+                        <div className="flex items-center bg-slate-800/95 border border-purple-500/70 rounded-lg px-1.5 sm:px-2 py-1 shadow-sm shrink-0">
                             <select
                                 value="s2"
                                 onChange={(e) => handleNavigate(e.target.value)}
-                                className="bg-transparent text-amber-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
+                                className="bg-transparent text-amber-300 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1 max-w-[115px] sm:max-w-none"
                                 id="levelNavSelect"
                             >
-                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 回到學習地圖</option>
-                                <option value="s1" className="bg-slate-800 text-white">第 1 關：認識柱體與錐體</option>
-                                <option value="s2" className="bg-slate-800 text-white font-bold">📍 第 2 關：展開圖與組合 (目前)</option>
-                                <option value="s3" className="bg-slate-800 text-white">第 3 關：認識球</option>
-                                <option value="quiz" className="bg-slate-800 text-yellow-300">★ 總測驗挑戰</option>
+                                <option value="home" className="bg-slate-800 text-amber-300 font-bold">🏠 學習地圖</option>
+                                <option value="s1" className="bg-slate-800 text-white">關卡 1：柱與錐</option>
+                                <option value="s2" className="bg-slate-800 text-white font-bold">📍 關卡 2 (目前)</option>
+                                <option value="s3" className="bg-slate-800 text-white">{isS3Unlocked ? "關卡 3：球體" : "🔒 關卡 3 (需破關)"}</option>
+                                <option value="quiz" className="bg-slate-800 text-yellow-300">{isQuizUnlocked ? "★ 總測驗" : "🔒 ★ 總測驗"}</option>
                             </select>
                         </div>
 
-                        {/* 右側：模式切換、重置視角、檢核開關 */}
+                        {/* 右側：重置視角、檢核開關、全螢幕 (手機版精簡空間) */}
                         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                            {/* 視角操作模式按鈕 */}
-                            <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-xs">
-                                <button 
-                                    onClick={() => setInteractionMode('rotate')} 
-                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === 'rotate' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                                    title="旋轉視角"
-                                >
-                                    旋轉
-                                </button>
-                                <button 
-                                    onClick={() => setInteractionMode('pan')} 
-                                    className={`px-1.5 sm:px-2 py-1 font-bold transition-colors whitespace-nowrap ${interactionMode === 'pan' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                                    title="平移視角"
-                                >
-                                    平移
-                                </button>
-                            </div>
                             <button 
                                 onClick={resetView} 
-                                className="px-2 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+                                className="px-1.5 sm:px-2 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
                                 title="重置視角"
                             >
-                                ↺ 重置
+                                ↺ <span className="hidden sm:inline">重置</span>
                             </button>
 
                             {/* 頂部檢核任務切換按鈕 */}
@@ -875,26 +896,26 @@
                                 className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md whitespace-nowrap ${quizOpen ? 'bg-purple-600 text-white ring-2 ring-purple-300' : 'bg-purple-700/80 text-purple-100 hover:bg-purple-600'}`}
                                 id="toggleQuizBtn"
                             >
-                                <span>🎯 檢核 ({quizStep + 1}/5)</span>
+                                <span>🎯 <span className="hidden sm:inline">檢核 </span>({quizStep + 1}/5)</span>
                                 <span>{quizOpen ? '▲' : '▼'}</span>
                             </button>
 
                             {/* 全螢幕切換按鈕 */}
                             <button 
                                 onClick={toggleFullscreen}
-                                className={`px-2 sm:px-2.5 py-1 border rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm whitespace-nowrap ${isFullscreen ? 'bg-slate-700 border-slate-500 text-amber-300 ring-1 ring-amber-300' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'}`}
+                                className={`px-1.5 sm:px-2.5 py-1 border rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm whitespace-nowrap ${isFullscreen ? 'bg-slate-700 border-slate-500 text-amber-300 ring-1 ring-amber-300' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'}`}
                                 title={isFullscreen ? '縮回原始視窗' : '全螢幕檢視'}
                                 id="btnFullscreen"
                             >
                                 <span>{isFullscreen ? '⤓' : '⛶'}</span>
-                                <span>{isFullscreen ? '縮回視窗' : '全螢幕'}</span>
+                                <span className="hidden sm:inline">{isFullscreen ? '縮回' : '全螢幕'}</span>
                             </button>
                         </div>
                     </header>
 
                     {/* --- 頂部折疊式檢核任務面板 (HUD) --- */}
                     {quizOpen && (
-                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-purple-500 px-3 py-2.5 z-20 shrink-0 max-h-[38vh] overflow-y-auto animate-fadeIn">
+                        <div className="bg-white text-slate-800 shadow-2xl border-b-2 border-purple-500 px-3 py-2 z-20 shrink-0 max-h-[52vh] sm:max-h-[42vh] overflow-y-auto animate-fadeIn" id="quizPanelHUD">
                             <div className="max-w-4xl mx-auto">
                                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-purple-100">
                                     <div className="flex items-center gap-1.5">
@@ -1126,7 +1147,7 @@
 
                                 {/* 題 5：圓錐展開側面形狀與特性 */}
                                 {quizStep === 4 && (
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                         <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
                                             <span>🎯 任務 5：圓錐的側面展開後是什麼形狀與特性？</span>
                                             <span className="text-xs font-normal text-purple-700">(已切換至圓錐)</span>
@@ -1134,7 +1155,7 @@
                                         <p className="text-xs text-slate-600">
                                             拉動展開滑桿觀察：圓錐側面原本是立體曲面，攤開後是什麼形狀？扇形弧長等於什麼？
                                         </p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-0.5">
                                             {[
                                                 { text: '側面展開是「扇形」，弧長剛好等於「底面圓周長」', right: true },
                                                 { text: '側面展開是長方形，長邊等於底面直徑', right: false },
@@ -1156,39 +1177,51 @@
                                                                     localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
                                                                 }
                                                             } catch(e) {}
+                                                            // 自動滾動保證按鈕映入眼簾
+                                                            setTimeout(() => {
+                                                                document.getElementById('btnGoNextStep3')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                                            }, 60);
                                                         } else {
                                                             setQuizFeedback({ ok: false, msg: '圓錐側面攤開像扇子一樣，是「扇形」喔！' });
                                                         }
                                                     }}
-                                                    className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left transition-all active:scale-95"
+                                                    className="p-1.5 sm:p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-purple-50 hover:border-purple-300 text-left transition-all active:scale-95"
                                                 >
                                                     {item.text}
                                                 </button>
                                             ))}
                                         </div>
                                         {quizFeedback && (
-                                            <div className={`p-2 rounded-lg text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                                                {quizFeedback.msg}
-                                            </div>
-                                        )}
-                                        {quizCompleted && (
-                                            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
-                                                <div className="flex-1 text-center sm:text-left text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg">
-                                                    🎉 恭喜完成第 2 關展開圖與組合檢核任務！
-                                                </div>
-                                                <button 
-                                                    onClick={() => {
-                                                        try {
-                                                            if (window.parent) {
-                                                                window.parent.postMessage({ type: 'GO_NEXT_STEP', currentStepId: 's2' }, '*');
-                                                            }
-                                                        } catch(e) {}
-                                                    }}
-                                                    className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-xs font-bold shadow-lg hover:brightness-110 active:scale-95 whitespace-nowrap"
-                                                    id="btnGoNextStep3"
-                                                >
-                                                    🚀 前往第 3 關：生活中的球體 →
-                                                </button>
+                                            <div className={`p-2 rounded-lg text-xs leading-relaxed ${quizFeedback.ok ? 'bg-green-50 text-green-800 border border-green-200 shadow-sm' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                                <div className="font-bold">{quizFeedback.msg}</div>
+                                                {quizCompleted && (
+                                                    <div className="mt-2 pt-1.5 border-t border-green-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                                                        <span className="text-xs font-bold text-emerald-800">
+                                                            🎉 恭喜完成第 2 關檢核任務！
+                                                        </span>
+                                                        <button 
+                                                            onClick={() => {
+                                                                try {
+                                                                    const p = JSON.parse(localStorage.getItem('geo5-progress-v1') || '{"done":[],"best":null}');
+                                                                    if (!p.done.includes('s2')) {
+                                                                        p.done.push('s2');
+                                                                        localStorage.setItem('geo5-progress-v1', JSON.stringify(p));
+                                                                    }
+                                                                    setProgress(p);
+                                                                    if (window.parent && window.parent !== window) {
+                                                                        window.parent.postMessage({ type: 'GO_NEXT_STEP', currentStepId: 's2' }, '*');
+                                                                        window.parent.postMessage({ type: 'NAVIGATE_STEP', stepId: 's3' }, '*');
+                                                                    }
+                                                                } catch(e) {}
+                                                                window.location.href = 'interactive_sphere.html';
+                                                            }}
+                                                            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-extrabold shadow-md hover:brightness-110 active:scale-95 whitespace-nowrap text-center animate-pulse"
+                                                            id="btnGoNextStep3"
+                                                        >
+                                                            🚀 前往第 3 關：生活中的球體 →
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -1204,94 +1237,110 @@
                             {animationProgress < 0.05 ? '📄 2D 平面展開圖' : animationProgress > 0.95 ? '🧊 3D 立體模型' : '🔄 組合摺疊中...'}
                         </div>
 
-                        {/* 拓撲連接點快速微調 (依照上下分成兩排呈現，按鈕大幅放大以利 iPad 觸控) */}
-                        {animationProgress < 0.2 && (
-                            <>
-                                {((shapeType === 'prism' && prismNetType === 'strip') || shapeType === 'cylinder') && (
-                                    <div className="absolute top-14 left-3 z-10 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 text-xs text-slate-200 shadow-2xl max-w-sm">
-                                        <div className="font-bold text-amber-300 mb-2 flex items-center gap-1.5 text-xs">
-                                            <span>✨ 底面拓撲位置調整</span>
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            {/* 第一排：上底連接點 */}
-                                            <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
-                                                <span className="text-xs font-bold text-yellow-300 whitespace-nowrap pl-1">上底:</span>
-                                                <div className="flex items-center gap-1.5 flex-1 justify-end">
-                                                    <button 
-                                                        onClick={() => setTopBasePosition(p => Math.max(0, p-1))} 
-                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-amber-600 rounded-lg font-bold text-sm text-yellow-200 border border-slate-600 shadow"
-                                                        aria-label="上底前移"
-                                                    >
-                                                        ◀
-                                                    </button>
-                                                    <span className="font-bold text-amber-300 text-sm px-2 text-center min-w-[50px]">
-                                                        側邊 {topBasePosition + 1}
-                                                    </span>
-                                                    <button 
-                                                        onClick={() => setTopBasePosition(p => Math.min(renderSides-1, p+1))} 
-                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-amber-600 rounded-lg font-bold text-sm text-yellow-200 border border-slate-600 shadow"
-                                                        aria-label="上底後移"
-                                                    >
-                                                        ▶
-                                                    </button>
+                        {/* 拓撲連接點快速微調 (手機端支援折疊，絕不遮蔽中央 2D 展開圖，圓錐不需此卡片) */}
+                        {animationProgress < 0.2 && shapeType !== 'cone' && (
+                            <div className="absolute top-12 left-3 z-10 flex flex-col items-start gap-1">
+                                {/* 手機端折疊開關 */}
+                                <button
+                                    onClick={() => setTopoOpen(!topoOpen)}
+                                    className="sm:hidden px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-amber-300 border border-slate-700 rounded-lg text-xs font-bold shadow-md flex items-center gap-1 backdrop-blur-md active:scale-95"
+                                >
+                                    <span>✨ 底面位置調整</span>
+                                    <span>{topoOpen ? '▲' : '▼'}</span>
+                                </button>
+
+                                {/* 展開卡片面板 (桌面端常駐顯示，手機端依 topoOpen 展開) */}
+                                {(topoOpen || (typeof window !== 'undefined' && window.innerWidth >= 640)) && (
+                                    <>
+                                        {((shapeType === 'prism' && prismNetType === 'strip') || shapeType === 'cylinder') && (
+                                            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 sm:p-3 text-xs text-slate-200 shadow-2xl w-[260px] sm:max-w-sm animate-fadeIn">
+                                                <div className="font-bold text-amber-300 mb-2 flex items-center justify-between text-xs">
+                                                    <span>✨ 底面拓撲位置調整</span>
+                                                    <button onClick={() => setTopoOpen(false)} className="sm:hidden text-slate-400 hover:text-white px-1">✕</button>
+                                                </div>
+                                                <div className="flex flex-col gap-1.5 sm:gap-2">
+                                                    {/* 第一排：上底連接點 */}
+                                                    <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1 sm:p-1.5 rounded-xl border border-slate-700">
+                                                        <span className="text-xs font-bold text-yellow-300 whitespace-nowrap pl-1">上底:</span>
+                                                        <div className="flex items-center gap-1 sm:gap-1.5 flex-1 justify-end">
+                                                            <button 
+                                                                onClick={() => setTopBasePosition(p => Math.max(0, p-1))} 
+                                                                className="min-w-[34px] sm:min-w-[42px] h-8 sm:h-10 px-2 sm:px-3 bg-slate-700 hover:bg-slate-600 active:bg-amber-600 rounded-lg font-bold text-xs sm:text-sm text-yellow-200 border border-slate-600 shadow"
+                                                                aria-label="上底前移"
+                                                            >
+                                                                ◀
+                                                            </button>
+                                                            <span className="font-bold text-amber-300 text-xs sm:text-sm px-1.5 text-center min-w-[46px]">
+                                                                側邊 {topBasePosition + 1}
+                                                            </span>
+                                                            <button 
+                                                                onClick={() => setTopBasePosition(p => Math.min(renderSides-1, p+1))} 
+                                                                className="min-w-[34px] sm:min-w-[42px] h-8 sm:h-10 px-2 sm:px-3 bg-slate-700 hover:bg-slate-600 active:bg-amber-600 rounded-lg font-bold text-xs sm:text-sm text-yellow-200 border border-slate-600 shadow"
+                                                                aria-label="上底後移"
+                                                            >
+                                                                ▶
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 第二排：下底連接點 */}
+                                                    <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1 sm:p-1.5 rounded-xl border border-slate-700">
+                                                        <span className="text-xs font-bold text-orange-300 whitespace-nowrap pl-1">下底:</span>
+                                                        <div className="flex items-center gap-1 sm:gap-1.5 flex-1 justify-end">
+                                                            <button 
+                                                                onClick={() => setBottomBasePosition(p => Math.max(0, p-1))} 
+                                                                className="min-w-[34px] sm:min-w-[42px] h-8 sm:h-10 px-2 sm:px-3 bg-slate-700 hover:bg-slate-600 active:bg-orange-600 rounded-lg font-bold text-xs sm:text-sm text-orange-200 border border-slate-600 shadow"
+                                                                aria-label="下底前移"
+                                                            >
+                                                                ◀
+                                                            </button>
+                                                            <span className="font-bold text-orange-300 text-xs sm:text-sm px-1.5 text-center min-w-[46px]">
+                                                                側邊 {bottomBasePosition + 1}
+                                                            </span>
+                                                            <button 
+                                                                onClick={() => setBottomBasePosition(p => Math.min(renderSides-1, p+1))} 
+                                                                className="min-w-[34px] sm:min-w-[42px] h-8 sm:h-10 px-2 sm:px-3 bg-slate-700 hover:bg-slate-600 active:bg-orange-600 rounded-lg font-bold text-xs sm:text-sm text-orange-200 border border-slate-600 shadow"
+                                                                aria-label="下底後移"
+                                                            >
+                                                                ▶
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+                                        )}
 
-                                            {/* 第二排：下底連接點 */}
-                                            <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
-                                                <span className="text-xs font-bold text-orange-300 whitespace-nowrap pl-1">下底:</span>
-                                                <div className="flex items-center gap-1.5 flex-1 justify-end">
-                                                    <button 
-                                                        onClick={() => setBottomBasePosition(p => Math.max(0, p-1))} 
-                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-orange-600 rounded-lg font-bold text-sm text-orange-200 border border-slate-600 shadow"
-                                                        aria-label="下底前移"
-                                                    >
-                                                        ◀
-                                                    </button>
-                                                    <span className="font-bold text-orange-300 text-sm px-2 text-center min-w-[50px]">
-                                                        側邊 {bottomBasePosition + 1}
-                                                    </span>
-                                                    <button 
-                                                        onClick={() => setBottomBasePosition(p => Math.min(renderSides-1, p+1))} 
-                                                        className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-orange-600 rounded-lg font-bold text-sm text-orange-200 border border-slate-600 shadow"
-                                                        aria-label="下底後移"
-                                                    >
-                                                        ▶
-                                                    </button>
+                                        {(shapeType === 'pyramid' && pyramidNetType === 'chain') && (
+                                            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 sm:p-3 text-xs text-slate-200 shadow-2xl w-[260px] sm:max-w-xs animate-fadeIn">
+                                                <div className="font-bold text-pink-300 mb-2 flex items-center justify-between text-xs">
+                                                    <span>✨ 底面拓撲位置調整</span>
+                                                    <button onClick={() => setTopoOpen(false)} className="sm:hidden text-slate-400 hover:text-white px-1">✕</button>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1 sm:p-1.5 rounded-xl border border-slate-700">
+                                                    <span className="text-xs font-bold text-pink-300 whitespace-nowrap pl-1">底面:</span>
+                                                    <div className="flex items-center gap-1 sm:gap-1.5 flex-1 justify-end">
+                                                        <button 
+                                                            onClick={() => setPyramidBasePosition(p => Math.max(0, p-1))} 
+                                                            className="min-w-[34px] sm:min-w-[42px] h-8 sm:h-10 px-2 sm:px-3 bg-slate-700 hover:bg-slate-600 active:bg-pink-600 rounded-lg font-bold text-xs sm:text-sm text-pink-200 border border-slate-600 shadow"
+                                                        >
+                                                            ◀
+                                                        </button>
+                                                        <span className="font-bold text-pink-300 text-xs sm:text-sm px-1.5 text-center min-w-[46px]">
+                                                            側邊 {pyramidBasePosition + 1}
+                                                        </span>
+                                                        <button 
+                                                            onClick={() => setPyramidBasePosition(p => Math.min(renderSides-1, p+1))} 
+                                                            className="min-w-[34px] sm:min-w-[42px] h-8 sm:h-10 px-2 sm:px-3 bg-slate-700 hover:bg-slate-600 active:bg-pink-600 rounded-lg font-bold text-xs sm:text-sm text-pink-200 border border-slate-600 shadow"
+                                                        >
+                                                            ▶
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        )}
+                                    </>
                                 )}
-
-                                {((shapeType === 'pyramid' && pyramidNetType === 'chain') || shapeType === 'cone') && (
-                                    <div className="absolute top-14 left-3 z-10 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 text-xs text-slate-200 shadow-2xl max-w-xs">
-                                        <div className="font-bold text-pink-300 mb-2 flex items-center gap-1.5 text-xs">
-                                            <span>✨ 底面拓撲位置調整</span>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
-                                            <span className="text-xs font-bold text-pink-300 whitespace-nowrap pl-1">底面:</span>
-                                            <div className="flex items-center gap-1.5 flex-1 justify-end">
-                                                <button 
-                                                    onClick={() => setPyramidBasePosition(p => Math.max(0, p-1))} 
-                                                    className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-pink-600 rounded-lg font-bold text-sm text-pink-200 border border-slate-600 shadow"
-                                                >
-                                                    ◀
-                                                </button>
-                                                <span className="font-bold text-pink-300 text-sm px-2 text-center min-w-[50px]">
-                                                    側邊 {pyramidBasePosition + 1}
-                                                </span>
-                                                <button 
-                                                    onClick={() => setPyramidBasePosition(p => Math.min(renderSides-1, p+1))} 
-                                                    className="min-w-[42px] h-10 px-3 bg-slate-700 hover:bg-slate-600 active:bg-pink-600 rounded-lg font-bold text-sm text-pink-200 border border-slate-600 shadow"
-                                                >
-                                                    ▶
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
+                            </div>
                         )}
 
                         {/* SVG 展開圖/立體畫布 */}
@@ -1346,12 +1395,12 @@
                             </g>
                         </svg>
 
-                        {/* --- 浮動於展示頁面「右側」的動畫控制列 (不遮擋中央幾何圖形，極利 iPad 單手觸控) --- */}
-                        <div className="absolute right-4 bottom-5 z-20 w-64 md:w-72 bg-slate-900/92 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl flex flex-col gap-3">
+                        {/* --- 浮動於展示頁面的動畫控制列 (手機版可折疊，絕不遮擋 3D 展開畫面) --- */}
+                        <div className="absolute right-2 sm:right-4 bottom-2 sm:bottom-5 z-20 w-[calc(100%-16px)] max-w-[280px] sm:max-w-none sm:w-64 md:w-72 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 sm:p-3.5 shadow-2xl flex flex-col gap-2 sm:gap-3 transition-all">
                             {/* 頂部資訊與快選切換 */}
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                                    <span>🎬 動畫進度:</span>
+                                    <span>🎬 動畫:</span>
                                     <span className="font-mono text-purple-400 font-extrabold text-sm">
                                         {Math.round(animationProgress * 100)}%
                                     </span>
@@ -1359,57 +1408,67 @@
                                 <div className="flex items-center gap-1">
                                     <button 
                                         onClick={() => { setIsAnimating(false); setAnimationProgress(0); }} 
-                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${animationProgress === 0 ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
+                                        className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-xs font-bold transition-all ${animationProgress === 0 ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
                                     >
                                         2D
                                     </button>
                                     <button 
                                         onClick={() => { setIsAnimating(false); setAnimationProgress(1); }} 
-                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${animationProgress === 1 ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
+                                        className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-xs font-bold transition-all ${animationProgress === 1 ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'}`}
                                     >
                                         3D
+                                    </button>
+                                    <button
+                                        onClick={() => setAnimBarOpen(!animBarOpen)}
+                                        className="sm:hidden px-1.5 py-0.5 text-xs text-slate-400 hover:text-white border border-slate-700 rounded bg-slate-800 ml-1"
+                                        title={animBarOpen ? "收合滑桿" : "展開滑桿"}
+                                    >
+                                        {animBarOpen ? "▼" : "▲"}
                                     </button>
                                 </div>
                             </div>
 
-                            {/* 主播放/暫停按鈕 */}
-                            <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={startAnimation} 
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm transition-all shadow-lg active:scale-95 ${isAnimating ? 'bg-amber-500 hover:bg-amber-600' : 'bg-purple-600 hover:bg-purple-700'}`}
-                                    id="btnPlayAnimation"
-                                >
-                                    {isAnimating ? <><IconPause /> 暫停動畫</> : <><IconPlay /> 動畫播放</>}
-                                </button>
-                                <button 
-                                    onClick={resetAnimation} 
-                                    className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl transition-all font-bold active:scale-95"
-                                    title="重置為展開狀態"
-                                >
-                                    <IconRotateCcw />
-                                </button>
-                            </div>
+                            {/* 折疊區域：播放按鈕與滑動條 (手機版點擊可收合/展開) */}
+                            {animBarOpen && (
+                                <>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={startAnimation} 
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm transition-all shadow-lg active:scale-95 ${isAnimating ? 'bg-amber-500 hover:bg-amber-600' : 'bg-purple-600 hover:bg-purple-700'}`}
+                                            id="btnPlayAnimation"
+                                        >
+                                            {isAnimating ? <><IconPause /> 暫停</> : <><IconPlay /> 動畫播放</>}
+                                        </button>
+                                        <button 
+                                            onClick={resetAnimation} 
+                                            className="p-2 sm:p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl transition-all font-bold active:scale-95"
+                                            title="重置為展開狀態"
+                                        >
+                                            <IconRotateCcw />
+                                        </button>
+                                    </div>
 
-                            {/* 順滑展開進度滑桿 */}
-                            <div className="flex flex-col gap-1 pt-1 border-t border-slate-800">
-                                <div className="flex justify-between text-[11px] font-bold text-slate-400">
-                                    <span>2D 平面</span>
-                                    <span>3D 立體</span>
-                                </div>
-                                <input 
-                                    type="range" 
-                                    min="0" 
-                                    max="1" 
-                                    step="0.005" 
-                                    value={animationProgress} 
-                                    onChange={(e) => { 
-                                        setAnimationProgress(parseFloat(e.target.value)); 
-                                        setIsAnimating(false); 
-                                    }} 
-                                    className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500" 
-                                    id="animationSlider"
-                                />
-                            </div>
+                                    <div className="flex flex-col gap-1 pt-1 border-t border-slate-800">
+                                        <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                                            <span>2D 平面展開</span>
+                                            <span>3D 立體摺疊</span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="1" 
+                                            step="0.005" 
+                                            value={animationProgress} 
+                                            onChange={(e) => { 
+                                                setAnimationProgress(parseFloat(e.target.value)); 
+                                                setIsAnimating(false); 
+                                            }} 
+                                            className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500" 
+                                            id="animationSlider"
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </main>
                 </div>
