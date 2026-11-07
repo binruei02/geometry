@@ -1011,7 +1011,7 @@
                     const sideDir = (shapes.length > 1 && s.x < 0) ? -1 : 1;
 
                     const callouts = [];
-                    let highlightVertex = null;
+                    const highlightVertices = [];
                     const highlightEdges = [];
 
                     if (s.type === 'prism') {
@@ -1036,9 +1036,6 @@
                         const vBot = bottomPts[bestIdx];
                         const vBotOther = bottomPts[otherIdx];
 
-                        // 選取畫面上較高處的頂點作為「頂點」標註目標，確保箭頭永遠在「邊」箭頭上方不交錯
-                        highlightVertex = vTop.y <= vTopOther.y ? vTop : vTopOther;
-
                         // 同時高亮：上底的邊、側面的邊、下底的邊
                         highlightEdges.push(
                             [vTop, vTopOther],
@@ -1059,7 +1056,7 @@
                             y: (vBot.y + vBotOther.y) * 0.5
                         };
 
-                        // 另一側（-sideDir）標註「側面」，避免與三條「邊」箭頭交錯
+                        // 另一側（-sideDir）標註「頂點」（同時指向上底頂點與下底頂點）與「側面」
                         let oppIdx = 0;
                         let oppVal = -Infinity;
                         topPts.forEach((p, i) => {
@@ -1075,13 +1072,22 @@
                         const zOppNext = (topPts[oppIdx].z + topPts[oppNext].z + bottomPts[oppNext].z + bottomPts[oppIdx].z) / 4;
                         const oppOther = zOppPrev < zOppNext ? oppPrev : oppNext;
 
+                        const vTopVertex = topPts[oppIdx];
+                        const vBotVertex = bottomPts[oppIdx];
+                        highlightVertices.push(vTopVertex, vBotVertex);
+
+                        const vertexAnchor = {
+                            x: (vTopVertex.x + vBotVertex.x) * 0.5,
+                            y: vTopVertex.y * 0.6 + vBotVertex.y * 0.4
+                        };
+
                         const sideFacePt = {
-                            x: (topPts[oppIdx].x + topPts[oppOther].x + bottomPts[oppIdx].x + bottomPts[oppOther].x) * 0.25,
-                            y: (topPts[oppIdx].y + topPts[oppOther].y + bottomPts[oppIdx].y + bottomPts[oppOther].y) * 0.25
+                            x: topPts[oppOther].x * 0.15 + bottomPts[oppIdx].x * 0.25 + bottomPts[oppOther].x * 0.60,
+                            y: Math.max(vBotVertex.y + 8, topPts[oppOther].y * 0.15 + bottomPts[oppIdx].y * 0.25 + bottomPts[oppOther].y * 0.60)
                         };
 
                         callouts.push(
-                            { label: '頂點', dir: sideDir, target: highlightVertex, targets: [highlightVertex], color: '#d97706', bg: '#fef3c7', textCol: '#92400e' },
+                            { label: '頂點', dir: -sideDir, target: vertexAnchor, targets: [vTopVertex, vBotVertex], color: '#d97706', bg: '#fef3c7', textCol: '#92400e' },
                             { label: '邊', dir: sideDir, target: sideEdgeMid, targets: [topEdgeMid, sideEdgeMid, botEdgeMid], color: '#059669', bg: '#d1fae5', textCol: '#065f46' },
                             { label: '側面', dir: -sideDir, target: sideFacePt, targets: [sideFacePt], color: '#4f46e5', bg: '#e0e7ff', textCol: '#3730a3' }
                         );
@@ -1104,7 +1110,6 @@
 
                         const vBot = bottomPts[bestIdx];
                         const vBotOther = bottomPts[otherIdx];
-                        highlightVertex = apexPt;
 
                         // 同時高亮：錐體側面的邊、下底（底面）的邊
                         highlightEdges.push(
@@ -1125,7 +1130,7 @@
                             y: (sideEdgeMid.y + botEdgeMid.y) * 0.5
                         };
 
-                        // 另一側（-sideDir）標註「側面」，避免與「邊」箭頭交錯
+                        // 另一側（-sideDir）標註「頂點」（同時指向錐頂與下底頂點）與「側面」
                         let oppIdx = 0;
                         let oppVal = -Infinity;
                         bottomPts.forEach((p, i) => {
@@ -1141,13 +1146,21 @@
                         const zOppNext = (apexPt.z + bottomPts[oppIdx].z + bottomPts[oppNext].z) / 3;
                         const oppOther = zOppPrev < zOppNext ? oppPrev : oppNext;
 
+                        const vBotVertex = bottomPts[oppIdx];
+                        highlightVertices.push(apexPt, vBotVertex);
+
+                        const vertexAnchor = {
+                            x: (apexPt.x + vBotVertex.x) * 0.5,
+                            y: apexPt.y * 0.6 + vBotVertex.y * 0.4
+                        };
+
                         const sideFacePt = {
-                            x: apexPt.x * 0.3 + (bottomPts[oppIdx].x + bottomPts[oppOther].x) * 0.35,
-                            y: apexPt.y * 0.3 + (bottomPts[oppIdx].y + bottomPts[oppOther].y) * 0.35
+                            x: apexPt.x * 0.15 + bottomPts[oppIdx].x * 0.25 + bottomPts[oppOther].x * 0.60,
+                            y: Math.max(vBotVertex.y + 8, apexPt.y * 0.15 + bottomPts[oppIdx].y * 0.25 + bottomPts[oppOther].y * 0.60)
                         };
 
                         callouts.push(
-                            { label: '頂點', dir: sideDir, target: apexPt, targets: [apexPt], color: '#d97706', bg: '#fef3c7', textCol: '#92400e' },
+                            { label: '頂點', dir: -sideDir, target: vertexAnchor, targets: [apexPt, vBotVertex], color: '#d97706', bg: '#fef3c7', textCol: '#92400e' },
                             { label: '邊', dir: sideDir, target: edgeAnchor, targets: [sideEdgeMid, botEdgeMid], color: '#059669', bg: '#d1fae5', textCol: '#065f46' },
                             { label: '側面', dir: -sideDir, target: sideFacePt, targets: [sideFacePt], color: '#4f46e5', bg: '#e0e7ff', textCol: '#3730a3' }
                         );
@@ -1179,7 +1192,7 @@
                                 bestIdx = i;
                             }
                         });
-                        highlightVertex = apexPt;
+                        highlightVertices.push(apexPt);
                         const botCenter = projectShape3D(s, 0, bottomY, 0);
                         const sideFacePt = {
                             x: apexPt.x * 0.35 + bottomPts[bestIdx].x * 0.48 + botCenter.x * 0.17,
@@ -1191,12 +1204,12 @@
                         );
                     }
 
-                    // 依左右側分組並按目標點 Y 排序，確保同側標籤之間至少間隔 34px 不重疊
+                    // 依左右側分組並按目標點 Y 排序，確保同側標籤之間至少間隔 38px 不重疊
                     [-1, 1].forEach((d) => {
                         const group = callouts.filter(c => c.dir === d);
                         group.sort((a, b) => a.target.y - b.target.y);
                         group.forEach((c, idx) => {
-                            c.labelY = idx === 0 ? c.target.y : Math.max(c.target.y, group[idx - 1].labelY + 34);
+                            c.labelY = idx === 0 ? c.target.y : Math.max(c.target.y, group[idx - 1].labelY + 38);
                         });
                     });
 
@@ -1224,17 +1237,18 @@
                                     strokeLinecap="round"
                                 />
                             ))}
-                            {/* 標示出的頂點圓點 */}
-                            {highlightVertex && (
+                            {/* 標示出的頂點圓點（含上底頂點/錐頂與下底頂點） */}
+                            {highlightVertices.map((vPt, vIdx) => (
                                 <circle
-                                    cx={highlightVertex.x}
-                                    cy={highlightVertex.y}
+                                    key={`hvert-${s.id}-${vIdx}`}
+                                    cx={vPt.x}
+                                    cy={vPt.y}
                                     r="5"
                                     fill="#f59e0b"
                                     stroke="#ffffff"
                                     strokeWidth="1.5"
                                 />
-                            )}
+                            ))}
                             {/* 各部位側邊箭頭與文字標籤（支援一對多箭頭同時指向上底邊、側邊、下底邊） */}
                             {callouts.map((c, idx) => {
                                 const boxW = c.label.length > 2 ? 72 : 46;
