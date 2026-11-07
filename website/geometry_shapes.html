@@ -169,14 +169,14 @@
             const foldAngle = 2 * Math.PI / n; 
             const root = {
                 id: 'side-0', localPoints: [{x:0, y:0, z:0}, {x:w, y:0, z:0}, {x:w, y:h, z:0}, {x:0, y:h, z:0}],
-                hue: 200, isBase: false, text: isSmooth ? '' : '1', children: []
+                hue: 200, isBase: false, text: isSmooth ? '' : '側面 1', children: []
             };
             
             let currentSide = root;
             for(let i=1; i<n; i++) {
                 const nextSide = {
                     id: `side-${i}`, localPoints: [{x:0, y:0, z:0}, {x:w, y:0, z:0}, {x:w, y:h, z:0}, {x:0, y:h, z:0}],
-                    hue: 200 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    hue: 200 + i * 10, isBase: false, text: isSmooth ? '' : `側面 ${i+1}`,
                     parentEdge: 1, childEdge: 3, foldAngle: foldAngle, children: []
                 };
                 currentSide.children.push(nextSide); currentSide = nextSide;
@@ -203,7 +203,7 @@
             for(let i=0; i<n; i++) {
                 const side = {
                     id: `side-${i}`, localPoints: [{x:0, y:0, z:0}, {x:w, y:0, z:0}, {x:w, y:h, z:0}, {x:0, y:h, z:0}],
-                    hue: 200 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    hue: 200 + i * 10, isBase: false, text: isSmooth ? '' : `側面 ${i+1}`,
                     parentEdge: i, childEdge: 0, foldAngle: Math.PI / 2, children: []
                 };
                 root.children.push(side);
@@ -245,7 +245,7 @@
             };
 
             const mainSide = {
-                id: `side-${baseAttach}`, localPoints: triPoints, hue: 320 + baseAttach * 10, isBase: false, text: isSmooth ? '' : (baseAttach+1).toString(),
+                id: `side-${baseAttach}`, localPoints: triPoints, hue: 320 + baseAttach * 10, isBase: false, text: isSmooth ? '' : `側面 ${baseAttach+1}`,
                 parentEdge: baseAttach, childEdge: 0, foldAngle: Math.PI - alpha, children: []
             };
             root.children.push(mainSide);
@@ -253,7 +253,7 @@
             let currentRight = mainSide;
             for(let i = baseAttach + 1; i < n; i++) {
                 const nextSide = {
-                    id: `side-${i}`, localPoints: triPoints, hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    id: `side-${i}`, localPoints: triPoints, hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : `側面 ${i+1}`,
                     parentEdge: 1, childEdge: 2, foldAngle: sideFoldAngle, children: []
                 };
                 currentRight.children.push(nextSide);
@@ -263,7 +263,7 @@
             let currentLeft = mainSide;
             for(let i = baseAttach - 1; i >= 0; i--) {
                 const nextSide = {
-                    id: `side-${i}`, localPoints: triPoints, hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    id: `side-${i}`, localPoints: triPoints, hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : `側面 ${i+1}`,
                     parentEdge: 2, childEdge: 1, foldAngle: sideFoldAngle, children: []
                 };
                 currentLeft.children.push(nextSide);
@@ -282,7 +282,7 @@
             for(let i=0; i<n; i++) {
                 root.children.push({
                     id: `side-${i}`, localPoints: [{x: -w/2, y: 0, z: 0}, {x: w/2, y: 0, z: 0}, {x: 0, y: slantHeight, z: 0}],
-                    hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : (i+1).toString(),
+                    hue: 320 + i * 10, isBase: false, text: isSmooth ? '' : `側面 ${i+1}`,
                     parentEdge: i, childEdge: 0, foldAngle: Math.PI - alpha, children: []
                 });
             }
@@ -585,6 +585,8 @@
                     });
                 }
 
+                let rawFacesBeforeSplit = currentFaces.map(f => ({ ...f, points: f.points.map(p => ({ ...p })) }));
+
                 let splitFaces = [];
                 currentFaces.forEach(face => {
                     if (face.isBase && isSmooth) {
@@ -611,6 +613,16 @@
                 currentFaces = splitFaces;
 
                 const fov = 1000;
+                const projectPt = (p) => {
+                    const px = p.x - cx; const py = p.y - cy; const pz = p.z - cz;
+                    const x1 = px * Math.cos(totalViewY) - pz * Math.sin(totalViewY);
+                    const z1 = px * Math.sin(totalViewY) + pz * Math.cos(totalViewY);
+                    const y2 = py * Math.cos(totalViewX) - z1 * Math.sin(totalViewX);
+                    const z2 = py * Math.sin(totalViewX) + z1 * Math.cos(totalViewX);
+                    const perspective = fov / (fov + z2);
+                    return { x: centerX + x1 * perspective, y: centerY + y2 * perspective, z: z2 };
+                };
+
                 const projectedFaces = currentFaces.map(face => {
                     const view3D = face.points.map(p => {
                         const px = p.x - cx; const py = p.y - cy; const pz = p.z - cz;
@@ -687,25 +699,274 @@
 
                 projectedFaces.sort((a, b) => b.zIndex - a.zIndex); 
 
-                return projectedFaces.map((face, idx) => {
-                    const d = face.projectedPoints.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
-                    const tx = face.projectedPoints.reduce((s,p)=>s+p.x,0)/face.projectedPoints.length;
-                    const ty = face.projectedPoints.reduce((s,p)=>s+p.y,0)/face.projectedPoints.length;
-                    
-                    return (
-                        <g key={`${face.id}-${idx}`}>
-                            <path d={d} fill={face.faceColor} stroke={face.strokeColor} strokeWidth={isSmooth ? 1 : 1.5} strokeLinejoin="round" />
-                            {face.text && face.isFront && animationProgress < 0.6 && (() => {
-                                const lines = face.text.split('\n');
-                                return (
-                                <text x={tx} y={ty} textAnchor="middle" fill="#333" fontSize="12" fontWeight="bold" pointerEvents="none" opacity={1 - animationProgress*1.5}>
-                                    {lines.map((line, i) => <tspan key={i} x={tx} dy={i===0 ? (lines.length>1?"-0.15em":"0.3em") : "1.1em"}>{line}</tspan>)}
-                                </text>
-                                );
-                            })()}
-                        </g>
-                    );
-                });
+                // --- 展開圖教學視覺框選與長寬/側面標註 (於 2D 展開狀態清晰顯示) ---
+                const renderNetAnnotations = () => {
+                    if (animationProgress >= 0.45) return null;
+                    const annotOpacity = Math.max(0, 1 - animationProgress * 2.2);
+                    const rawProjected = rawFacesBeforeSplit.map(f => ({
+                        ...f,
+                        projPts: f.points.map(projectPt)
+                    }));
+                    const sideFaces = rawProjected.filter(f => !f.isBase);
+                    const baseFaces = rawProjected.filter(f => f.isBase);
+
+                    if (shapeType === 'prism') {
+                        const allSidePts = sideFaces.flatMap(f => f.projPts);
+                        const minX = Math.min(...allSidePts.map(p => p.x));
+                        const maxX = Math.max(...allSidePts.map(p => p.x));
+                        const minY = Math.min(...allSidePts.map(p => p.y));
+                        const maxY = Math.max(...allSidePts.map(p => p.y));
+                        const midX = (minX + maxX) / 2;
+                        const midY = (minY + maxY) / 2;
+
+                        if (actualPrismNet === 'strip') {
+                            return (
+                                <g className="pointer-events-none select-none" opacity={annotOpacity}>
+                                    {/* 框選整個角柱側面大長方形 */}
+                                    <rect
+                                        x={minX - 6}
+                                        y={minY - 6}
+                                        width={maxX - minX + 12}
+                                        height={maxY - minY + 12}
+                                        rx="8"
+                                        fill="none"
+                                        stroke="#22d3ee"
+                                        strokeWidth="3.5"
+                                        strokeDasharray="8 5"
+                                    />
+                                    {/* 側面大長方形醒目提示標籤 */}
+                                    <g transform={`translate(${midX}, ${maxY - 18})`}>
+                                        <rect x="-132" y="-12" width="264" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
+                                        <text x="0" y="0" fill="#67e8f9" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                            📦 側面區域（合起來為一個大長方形）
+                                        </text>
+                                    </g>
+                                    {/* 右側標示「寬（＝柱高）」 */}
+                                    <g>
+                                        <line x1={maxX + 18} y1={minY} x2={maxX + 18} y2={maxY} stroke="#fbbf24" strokeWidth="2.5" />
+                                        <polygon points={`${maxX + 18},${minY} ${maxX + 14},${minY + 8} ${maxX + 22},${minY + 8}`} fill="#fbbf24" />
+                                        <polygon points={`${maxX + 18},${maxY} ${maxX + 14},${maxY - 8} ${maxX + 22},${maxY - 8}`} fill="#fbbf24" />
+                                        <rect x={maxX + 26} y={midY - 12} width="96" height="24" rx="6" fill="rgba(15, 23, 42, 0.92)" stroke="#fbbf24" strokeWidth="1.5" />
+                                        <text x={maxX + 74} y={midY} fill="#fde68a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                            ↕ 寬＝柱高
+                                        </text>
+                                    </g>
+                                </g>
+                            );
+                        } else {
+                            // 星形展開：框選每個長方形側面
+                            return (
+                                <g className="pointer-events-none select-none" opacity={annotOpacity}>
+                                    {sideFaces.map((sf, i) => {
+                                        const d = sf.projPts.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+                                        return <path key={`pstar-${i}`} d={d} fill="none" stroke="#22d3ee" strokeWidth="3" strokeDasharray="6 4" />;
+                                    })}
+                                    <g transform={`translate(${midX}, ${maxY + 26})`}>
+                                        <rect x="-115" y="-12" width="230" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
+                                        <text x="0" y="0" fill="#67e8f9" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                            📦 虛線框選處皆為「側面（長方形）」
+                                        </text>
+                                    </g>
+                                </g>
+                            );
+                        }
+                    }
+
+                    if (shapeType === 'cylinder') {
+                        const allSidePts = sideFaces.flatMap(f => f.projPts);
+                        const minX = Math.min(...allSidePts.map(p => p.x));
+                        const maxX = Math.max(...allSidePts.map(p => p.x));
+                        const minY = Math.min(...allSidePts.map(p => p.y));
+                        const maxY = Math.max(...allSidePts.map(p => p.y));
+                        const midX = (minX + maxX) / 2;
+                        const midY = (minY + maxY) / 2;
+
+                        return (
+                            <g className="pointer-events-none select-none" opacity={annotOpacity}>
+                                {/* 上底與下底圓形標示與圓周虛線框 */}
+                                {baseFaces.map((bf, bIdx) => {
+                                    const bx = bf.projPts.reduce((s, p) => s + p.x, 0) / bf.projPts.length;
+                                    const by = bf.projPts.reduce((s, p) => s + p.y, 0) / bf.projPts.length;
+                                    const br = Math.hypot(bf.projPts[0].x - bx, bf.projPts[0].y - by);
+                                    const isTop = bf.id === 'top';
+                                    return (
+                                        <g key={`cyl-base-${bIdx}`}>
+                                            <circle cx={bx} cy={by} r={br + 2} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6 4" />
+                                            <rect x={bx - 42} y={by - 11} width="84" height="22" rx="11" fill="rgba(15, 23, 42, 0.88)" stroke="#f59e0b" strokeWidth="1.5" />
+                                            <text x={bx} y={by} fill="#fde68a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                                {isTop ? '上底 (圓形)' : '下底 (圓形)'}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+
+                                {/* 框選整個圓柱展開側面長方形 */}
+                                <rect
+                                    x={minX - 4}
+                                    y={minY - 4}
+                                    width={maxX - minX + 8}
+                                    height={maxY - minY + 8}
+                                    rx="6"
+                                    fill="none"
+                                    stroke="#22d3ee"
+                                    strokeWidth="3.5"
+                                    strokeDasharray="8 5"
+                                />
+
+                                {/* 標示長方形的「長（＝底面圓周長）」雙向尺寸箭頭 */}
+                                <g>
+                                    <line x1={minX + 6} y1={minY + 22} x2={maxX - 6} y2={minY + 22} stroke="#fde047" strokeWidth="2.5" />
+                                    <polygon points={`${minX + 4},${minY + 22} ${minX + 14},${minY + 17} ${minX + 14},${minY + 27}`} fill="#fde047" />
+                                    <polygon points={`${maxX - 4},${minY + 22} ${maxX - 14},${minY + 17} ${maxX - 14},${minY + 27}`} fill="#fde047" />
+                                    <rect x={midX - 96} y={minY + 10} width="192" height="24" rx="12" fill="rgba(15, 23, 42, 0.94)" stroke="#fde047" strokeWidth="1.8" />
+                                    <text x={midX} y={minY + 22} fill="#fef08a" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        ⬅ 長（＝底面圓周長） ➡
+                                    </text>
+                                </g>
+
+                                {/* 側面中央標籤 */}
+                                <g transform={`translate(${midX}, ${minY + 66})`}>
+                                    <rect x="-86" y="-12" width="172" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
+                                    <text x="0" y="0" fill="#67e8f9" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        📦 側面（展開為長方形）
+                                    </text>
+                                </g>
+
+                                {/* 右側標示長方形的「寬（＝圓柱的高）」雙向尺寸箭頭 */}
+                                <g>
+                                    <line x1={maxX + 16} y1={minY} x2={maxX + 16} y2={maxY} stroke="#f472b6" strokeWidth="2.5" />
+                                    <polygon points={`${maxX + 16},${minY} ${maxX + 11},${minY + 9} ${maxX + 21},${minY + 9}`} fill="#f472b6" />
+                                    <polygon points={`${maxX + 16},${maxY} ${maxX + 11},${maxY - 9} ${maxX + 21},${maxY - 9}`} fill="#f472b6" />
+                                    <rect x={maxX + 24} y={midY - 13} width="112" height="26" rx="8" fill="rgba(15, 23, 42, 0.94)" stroke="#f472b6" strokeWidth="1.8" />
+                                    <text x={maxX + 80} y={midY} fill="#fbcfe8" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        ↕ 寬（＝柱高）
+                                    </text>
+                                </g>
+                            </g>
+                        );
+                    }
+
+                    if (shapeType === 'pyramid') {
+                        const allSidePts = sideFaces.flatMap(f => f.projPts);
+                        const minX = Math.min(...allSidePts.map(p => p.x));
+                        const maxX = Math.max(...allSidePts.map(p => p.x));
+                        const maxY = Math.max(...allSidePts.map(p => p.y));
+                        const midX = (minX + maxX) / 2;
+
+                        return (
+                            <g className="pointer-events-none select-none" opacity={annotOpacity}>
+                                {/* 虛線高亮框選每一個三角形側面 */}
+                                {sideFaces.map((sf, i) => {
+                                    const d = sf.projPts.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+                                    return (
+                                        <path
+                                            key={`pyr-side-${i}`}
+                                            d={d}
+                                            fill="none"
+                                            stroke="#38bdf8"
+                                            strokeWidth="3"
+                                            strokeDasharray="6 4"
+                                        />
+                                    );
+                                })}
+                                {/* 底部整體說明標籤 */}
+                                <g transform={`translate(${midX}, ${maxY + 26})`}>
+                                    <rect x="-130" y="-13" width="260" height="26" rx="13" fill="rgba(15, 23, 42, 0.94)" stroke="#38bdf8" strokeWidth="1.8" />
+                                    <text x="0" y="0" fill="#7dd3fc" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        📐 虛線框選處：共 {sides} 個「三角形側面」
+                                    </text>
+                                </g>
+                            </g>
+                        );
+                    }
+
+                    if (shapeType === 'cone') {
+                        // 將圓錐 32 個側面切片依序排列，描繪出完整的「扇形側面」外框與弧長
+                        const sortedSides = [...sideFaces].sort((a, b) => {
+                            const ia = parseInt(a.id.split('-')[1] || '0', 10);
+                            const ib = parseInt(b.id.split('-')[1] || '0', 10);
+                            return ia - ib;
+                        });
+                        if (sortedSides.length === 0) return null;
+
+                        const apexPt = sortedSides[0].projPts[2];
+                        const arcPts = [sortedSides[0].projPts[0], ...sortedSides.map(sf => sf.projPts[1])];
+                        const fanPathD = `M ${apexPt.x} ${apexPt.y} ` + arcPts.map(p => `L ${p.x} ${p.y}`).join(' ') + ' Z';
+                        const arcOnlyD = arcPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+                        const midArcPt = arcPts[Math.floor(arcPts.length / 2)];
+                        const fanCenterX = apexPt.x * 0.45 + midArcPt.x * 0.55;
+                        const fanCenterY = apexPt.y * 0.45 + midArcPt.y * 0.55;
+
+                        const baseFace = baseFaces[0];
+                        const bx = baseFace ? baseFace.projPts.reduce((s, p) => s + p.x, 0) / baseFace.projPts.length : 400;
+                        const by = baseFace ? baseFace.projPts.reduce((s, p) => s + p.y, 0) / baseFace.projPts.length : 250;
+                        const br = baseFace ? Math.hypot(baseFace.projPts[0].x - bx, baseFace.projPts[0].y - by) : 80;
+
+                        return (
+                            <g className="pointer-events-none select-none" opacity={annotOpacity}>
+                                {/* 圓錐底面標示 */}
+                                {baseFace && (
+                                    <g>
+                                        <circle cx={bx} cy={by} r={br + 2} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6 4" />
+                                        <rect x={bx - 44} y={by - 11} width="88" height="22" rx="11" fill="rgba(15, 23, 42, 0.9)" stroke="#f59e0b" strokeWidth="1.5" />
+                                        <text x={bx} y={by} fill="#fde68a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                            底面 (圓形)
+                                        </text>
+                                    </g>
+                                )}
+
+                                {/* 扇形側面完整外框 */}
+                                <path d={fanPathD} fill="none" stroke="#38bdf8" strokeWidth="3.5" strokeDasharray="8 5" strokeLinejoin="round" />
+                                {/* 扇形弧長高亮 */}
+                                <path d={arcOnlyD} fill="none" stroke="#fde047" strokeWidth="3.5" strokeLinecap="round" />
+
+                                {/* 扇形側面中央標籤 */}
+                                <g transform={`translate(${fanCenterX}, ${fanCenterY})`}>
+                                    <rect x="-86" y="-13" width="172" height="26" rx="13" fill="rgba(15, 23, 42, 0.94)" stroke="#38bdf8" strokeWidth="1.8" />
+                                    <text x="0" y="0" fill="#7dd3fc" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        📐 側面（展開後為扇形）
+                                    </text>
+                                </g>
+
+                                {/* 扇形弧長標示 */}
+                                <g transform={`translate(${midArcPt.x}, ${midArcPt.y + 22})`}>
+                                    <rect x="-102" y="-12" width="204" height="24" rx="12" fill="rgba(15, 23, 42, 0.94)" stroke="#fde047" strokeWidth="1.8" />
+                                    <text x="0" y="0" fill="#fef08a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        ✨ 扇形弧長（＝底面圓周長）
+                                    </text>
+                                </g>
+                            </g>
+                        );
+                    }
+
+                    return null;
+                };
+
+                return (
+                    <>
+                        {projectedFaces.map((face, idx) => {
+                            const d = face.projectedPoints.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+                            const tx = face.projectedPoints.reduce((s,p)=>s+p.x,0)/face.projectedPoints.length;
+                            const ty = face.projectedPoints.reduce((s,p)=>s+p.y,0)/face.projectedPoints.length;
+                            
+                            return (
+                                <g key={`${face.id}-${idx}`}>
+                                    <path d={d} fill={face.faceColor} stroke={face.strokeColor} strokeWidth={isSmooth ? 1 : 1.5} strokeLinejoin="round" />
+                                    {face.text && face.isFront && animationProgress < 0.6 && (() => {
+                                        const lines = face.text.split('\n');
+                                        return (
+                                        <text x={tx} y={ty} textAnchor="middle" fill="#1e293b" fontSize="12" fontWeight="bold" pointerEvents="none" opacity={1 - animationProgress*1.5}>
+                                            {lines.map((line, i) => <tspan key={i} x={tx} dy={i===0 ? (lines.length>1?"-0.15em":"0.3em") : "1.1em"}>{line}</tspan>)}
+                                        </text>
+                                        );
+                                    })()}
+                                </g>
+                            );
+                        })}
+                        {renderNetAnnotations()}
+                    </>
+                );
             };
 
             // 導覽跳轉邏輯 (支援回首頁與跨關卡切換，遵守破關解鎖規則)
@@ -929,6 +1190,8 @@
                                                 onClick={() => {
                                                     setQuizStep(s);
                                                     setQuizFeedback(null);
+                                                    setIsAnimating(false);
+                                                    setAnimationProgress(0);
                                                     if (s === 0) setShapeType('prism');
                                                     else if (s === 1 || s === 2) setShapeType('cylinder');
                                                     else if (s === 3) setShapeType('pyramid');
