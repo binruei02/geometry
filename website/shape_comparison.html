@@ -887,6 +887,281 @@
                 if (interactionMode === 'pan') cursorClass = 'cursor-grabbing';
             }
 
+            // 繪製形體側邊箭頭標註（頂點、邊、側面）
+            const renderAnnotations = () => {
+                return shapes.map((s) => {
+                    if (s.type === 'sphere') return null;
+
+                    const scale = UNIT_SCALE;
+                    const worldX = s.x * scale;
+                    const worldZ = s.z * scale;
+                    const elevation = s.y * scale;
+                    const height = s.height * scale;
+                    const isSmooth = s.type === 'cylinder' || s.type === 'cone';
+                    const renderSides = isSmooth ? 32 : s.sides;
+                    const radius = isSmooth
+                        ? s.baseSize * scale
+                        : (s.baseSize * scale) / (2 * Math.sin(Math.PI / renderSides));
+
+                    const bottomY = -elevation;
+                    const topY = -elevation - height;
+                    const bottomPts = [];
+                    const topPts = [];
+
+                    for (let i = 0; i < renderSides; i++) {
+                        const angle = (2 * Math.PI * i) / renderSides - Math.PI / 2;
+                        const px = worldX + radius * Math.cos(angle);
+                        const pz = worldZ + radius * Math.sin(angle);
+                        bottomPts.push(project3D(px, bottomY, pz));
+                        topPts.push(project3D(px, topY, pz));
+                    }
+                    const apexPt = project3D(worldX, topY, worldZ);
+
+                    const allPts = (s.type === 'prism' || s.type === 'cylinder')
+                        ? [...bottomPts, ...topPts]
+                        : [...bottomPts, apexPt];
+
+                    const minX = Math.min(...allPts.map(p => p.x));
+                    const maxX = Math.max(...allPts.map(p => p.x));
+                    const maxY = Math.max(...allPts.map(p => p.y));
+                    const centerX = (minX + maxX) / 2;
+
+                    let shapeLabel = "";
+                    if (s.type === "prism") shapeLabel = `${s.sides === 3 ? "三角柱" : s.sides === 4 ? "四角柱" : s.sides === 5 ? "五角柱" : s.sides + "角柱"}`;
+                    else if (s.type === "pyramid") shapeLabel = `${s.sides === 3 ? "三角錐" : s.sides === 4 ? "四角錐" : s.sides === 5 ? "五角錐" : s.sides + "角錐"}`;
+                    else if (s.type === "cylinder") shapeLabel = "圓柱";
+                    else if (s.type === "cone") shapeLabel = "圓錐";
+
+                    // 若場景有多個形體且此形體位於左側，標註放左側；否則放右側
+                    const sideDir = (shapes.length > 1 && s.x < 0) ? -1 : 1;
+                    const lineStartX = sideDir === 1 ? maxX + 38 : minX - 38;
+
+                    const callouts = [];
+                    let highlightVertex = null;
+                    let highlightEdge = null;
+
+                    if (s.type === 'prism') {
+                        let bestIdx = 0;
+                        let bestVal = -Infinity;
+                        topPts.forEach((p, i) => {
+                            const val = p.x * sideDir;
+                            if (val > bestVal) {
+                                bestVal = val;
+                                bestIdx = i;
+                            }
+                        });
+
+                        const vTop = topPts[bestIdx];
+                        const vBot = bottomPts[bestIdx];
+                        highlightVertex = vTop;
+                        highlightEdge = [vTop, vBot];
+
+                        const edgeMid = {
+                            x: vTop.x * 0.55 + vBot.x * 0.45,
+                            y: vTop.y * 0.55 + vBot.y * 0.45
+                        };
+
+                        const prevIdx = (bestIdx - 1 + renderSides) % renderSides;
+                        const nextIdx = (bestIdx + 1) % renderSides;
+                        const zPrev = (topPts[prevIdx].z + topPts[bestIdx].z + bottomPts[bestIdx].z + bottomPts[prevIdx].z) / 4;
+                        const zNext = (topPts[bestIdx].z + topPts[nextIdx].z + bottomPts[nextIdx].z + bottomPts[bestIdx].z) / 4;
+                        const otherIdx = zPrev < zNext ? prevIdx : nextIdx;
+
+                        const sideFacePt = {
+                            x: (topPts[bestIdx].x + topPts[otherIdx].x) * 0.15 + (bottomPts[bestIdx].x + bottomPts[otherIdx].x) * 0.35,
+                            y: (topPts[bestIdx].y + topPts[otherIdx].y) * 0.15 + (bottomPts[bestIdx].y + bottomPts[otherIdx].y) * 0.35
+                        };
+
+                        callouts.push(
+                            { label: '頂點', target: vTop, color: '#d97706', bg: '#fef3c7', textCol: '#92400e' },
+                            { label: '邊', target: edgeMid, color: '#059669', bg: '#d1fae5', textCol: '#065f46' },
+                            { label: '側面', target: sideFacePt, color: '#4f46e5', bg: '#e0e7ff', textCol: '#3730a3' }
+                        );
+                    } else if (s.type === 'pyramid') {
+                        let bestIdx = 0;
+                        let bestVal = -Infinity;
+                        bottomPts.forEach((p, i) => {
+                            const val = p.x * sideDir;
+                            if (val > bestVal) {
+                                bestVal = val;
+                                bestIdx = i;
+                            }
+                        });
+
+                        const vBot = bottomPts[bestIdx];
+                        highlightVertex = apexPt;
+                        highlightEdge = [apexPt, vBot];
+
+                        const edgeMid = {
+                            x: apexPt.x * 0.52 + vBot.x * 0.48,
+                            y: apexPt.y * 0.52 + vBot.y * 0.48
+                        };
+
+                        const prevIdx = (bestIdx - 1 + renderSides) % renderSides;
+                        const nextIdx = (bestIdx + 1) % renderSides;
+                        const zPrev = (apexPt.z + bottomPts[prevIdx].z + bottomPts[bestIdx].z) / 3;
+                        const zNext = (apexPt.z + bottomPts[bestIdx].z + bottomPts[nextIdx].z) / 3;
+                        const otherIdx = zPrev < zNext ? prevIdx : nextIdx;
+
+                        const sideFacePt = {
+                            x: apexPt.x * 0.25 + bottomPts[bestIdx].x * 0.375 + bottomPts[otherIdx].x * 0.375,
+                            y: apexPt.y * 0.25 + bottomPts[bestIdx].y * 0.375 + bottomPts[otherIdx].y * 0.375
+                        };
+
+                        callouts.push(
+                            { label: '頂點', target: apexPt, color: '#d97706', bg: '#fef3c7', textCol: '#92400e' },
+                            { label: '邊', target: edgeMid, color: '#059669', bg: '#d1fae5', textCol: '#065f46' },
+                            { label: '側面', target: sideFacePt, color: '#4f46e5', bg: '#e0e7ff', textCol: '#3730a3' }
+                        );
+                    } else if (s.type === 'cylinder') {
+                        let bestIdx = 0;
+                        let bestVal = -Infinity;
+                        topPts.forEach((p, i) => {
+                            const val = p.x * sideDir;
+                            if (val > bestVal) {
+                                bestVal = val;
+                                bestIdx = i;
+                            }
+                        });
+                        const midCenter = project3D(worldX, (topY + bottomY) / 2, worldZ);
+                        const sideFacePt = {
+                            x: (topPts[bestIdx].x + bottomPts[bestIdx].x) * 0.38 + midCenter.x * 0.24,
+                            y: (topPts[bestIdx].y + bottomPts[bestIdx].y) * 0.5
+                        };
+                        callouts.push(
+                            { label: '側面(曲面)', target: sideFacePt, color: '#4f46e5', bg: '#e0e7ff', textCol: '#3730a3' }
+                        );
+                    } else if (s.type === 'cone') {
+                        let bestIdx = 0;
+                        let bestVal = -Infinity;
+                        bottomPts.forEach((p, i) => {
+                            const val = p.x * sideDir;
+                            if (val > bestVal) {
+                                bestVal = val;
+                                bestIdx = i;
+                            }
+                        });
+                        highlightVertex = apexPt;
+                        const botCenter = project3D(worldX, bottomY, worldZ);
+                        const sideFacePt = {
+                            x: apexPt.x * 0.35 + bottomPts[bestIdx].x * 0.48 + botCenter.x * 0.17,
+                            y: apexPt.y * 0.35 + bottomPts[bestIdx].y * 0.65
+                        };
+                        callouts.push(
+                            { label: '頂點', target: apexPt, color: '#d97706', bg: '#fef3c7', textCol: '#92400e' },
+                            { label: '側面(曲面)', target: sideFacePt, color: '#4f46e5', bg: '#e0e7ff', textCol: '#3730a3' }
+                        );
+                    }
+
+                    // 依目標點 Y 排序並確保標籤之間至少間隔 30px 不重疊
+                    callouts.sort((a, b) => a.target.y - b.target.y);
+                    callouts.forEach((c, idx) => {
+                        c.labelY = idx === 0 ? c.target.y : Math.max(c.target.y, callouts[idx - 1].labelY + 30);
+                    });
+
+                    return (
+                        <g key={`annot-${s.id}`} className="pointer-events-none select-none">
+                            {/* 形體名稱置於 2D 投影邊界最下方外側，絕不遮擋形體任何面與點選 */}
+                            {shapeLabel && (
+                                <g>
+                                    <rect x={centerX - 32} y={maxY + 12} width="64" height="24" rx="12" fill="rgba(15, 23, 42, 0.9)" stroke="#6366f1" strokeWidth="1.5" />
+                                    <text x={centerX} y={maxY + 24} fill="#ffffff" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        {shapeLabel}
+                                    </text>
+                                </g>
+                            )}
+                            {/* 標示出的邊高亮線段 */}
+                            {highlightEdge && (
+                                <line
+                                    x1={highlightEdge[0].x}
+                                    y1={highlightEdge[0].y}
+                                    x2={highlightEdge[1].x}
+                                    y2={highlightEdge[1].y}
+                                    stroke="#10b981"
+                                    strokeWidth="3.5"
+                                    strokeLinecap="round"
+                                />
+                            )}
+                            {/* 標示出的頂點圓點 */}
+                            {highlightVertex && (
+                                <circle
+                                    cx={highlightVertex.x}
+                                    cy={highlightVertex.y}
+                                    r="5"
+                                    fill="#f59e0b"
+                                    stroke="#ffffff"
+                                    strokeWidth="1.5"
+                                />
+                            )}
+                            {/* 各部位側邊箭頭與文字標籤 */}
+                            {callouts.map((c, idx) => {
+                                const boxW = c.label.length > 2 ? 72 : 46;
+                                const boxH = 22;
+                                const startX = lineStartX;
+                                const startY = c.labelY;
+                                const endX = c.target.x;
+                                const endY = c.target.y;
+
+                                const dx = endX - startX;
+                                const dy = endY - startY;
+                                const len = Math.hypot(dx, dy) || 1;
+                                const ux = dx / len;
+                                const uy = dy / len;
+                                const px = -uy;
+                                const py = ux;
+
+                                const tipX = endX - ux * 3;
+                                const tipY = endY - uy * 3;
+                                const b1x = tipX - ux * 8 + px * 4.5;
+                                const b1y = tipY - uy * 8 + py * 4.5;
+                                const b2x = tipX - ux * 8 - px * 4.5;
+                                const b2y = tipY - uy * 8 - py * 4.5;
+
+                                const boxX = sideDir === 1 ? startX : startX - boxW;
+
+                                return (
+                                    <g key={`callout-${s.id}-${idx}`}>
+                                        <line
+                                            x1={startX}
+                                            y1={startY}
+                                            x2={tipX - ux * 5}
+                                            y2={tipY - uy * 5}
+                                            stroke={c.color}
+                                            strokeWidth="2"
+                                        />
+                                        <polygon
+                                            points={`${tipX},${tipY} ${b1x},${b1y} ${b2x},${b2y}`}
+                                            fill={c.color}
+                                        />
+                                        <rect
+                                            x={boxX}
+                                            y={startY - boxH / 2}
+                                            width={boxW}
+                                            height={boxH}
+                                            rx="6"
+                                            fill={c.bg}
+                                            stroke={c.color}
+                                            strokeWidth="1.5"
+                                        />
+                                        <text
+                                            x={boxX + boxW / 2}
+                                            y={startY}
+                                            fill={c.textCol}
+                                            fontSize="11.5"
+                                            fontWeight="bold"
+                                            textAnchor="middle"
+                                            dominantBaseline="central"
+                                        >
+                                            {c.label}
+                                        </text>
+                                    </g>
+                                );
+                            })}
+                        </g>
+                    );
+                });
+            };
+
             // 繪製座標軸 (Axes)
             const renderAxes = () => {
                 const origin = project3D(0, 0, 0);
@@ -963,28 +1238,10 @@
                         style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: '6px' }} 
                         className="bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex flex-nowrap items-center justify-between gap-1 sm:gap-2 text-white z-30 shrink-0 min-h-[48px]"
                     >
-                        {/* 左側：形體新增下拉選單 (取代原本佔滿版面的 5 個按鈕，手機版 100% 免滑動) */}
-                        <div className="flex items-center bg-indigo-950/90 border border-indigo-500/80 rounded-lg px-2 py-1 shadow-sm shrink-0">
-                            <select
-                                value={addShapeSelectVal}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val) {
-                                        addShape(val);
-                                    }
-                                    setAddShapeSelectVal("");
-                                }}
-                                className="bg-transparent text-indigo-200 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
-                                id="addShapeSelect"
-                                title="選擇並新增形體"
-                            >
-                                <option value="" disabled className="bg-slate-800 text-indigo-300">＋ 新增形體 ▾</option>
-                                <option value="prism" className="bg-slate-800 text-white">＋ 角柱 (Prism)</option>
-                                <option value="pyramid" className="bg-slate-800 text-white">＋ 角錐 (Pyramid)</option>
-                                <option value="cylinder" className="bg-slate-800 text-white">＋ 圓柱 (Cylinder)</option>
-                                <option value="cone" className="bg-slate-800 text-white">＋ 圓錐 (Cone)</option>
-                                <option value="sphere" className="bg-slate-800 text-white">＋ 球體 (Sphere)</option>
-                            </select>
+                        {/* 左側：關卡標題 */}
+                        <div className="flex items-center gap-1.5 text-slate-200 font-extrabold text-xs sm:text-sm shrink-0">
+                            <span>🧊</span>
+                            <span>3D 立體圖形實驗室</span>
                         </div>
 
                         {/* 中間：關卡快速切換 下拉選單 (破關解鎖狀態同步顯示) */}
@@ -1257,18 +1514,49 @@
                         {/* 左側：精簡參數面板 (手機端支援浮動展開/收合，釋放 3D 空間) */}
                         {sidebarOpen && (
                             <div className="w-64 sm:w-64 md:w-72 bg-white/95 backdrop-blur-md border-r border-slate-200 flex flex-col overflow-y-auto p-2.5 sm:p-3 text-xs shrink-0 max-h-full absolute sm:relative z-20 left-0 top-0 bottom-0 shadow-2xl sm:shadow-none animate-fadeIn">
-                                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
-                                    <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                                        <IconSettings /> 幾何參數控制
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[11px] text-slate-400">物件: {shapes.length} 個</span>
+                                {/* 新增形體區塊（置於幾何參數控制上方） */}
+                                <div className="mb-2.5 pb-2.5 border-b border-slate-200">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <span className="font-bold text-indigo-700 flex items-center gap-1">
+                                            <span>➕</span> 新增形體
+                                        </span>
                                         <button 
                                             onClick={() => setSidebarOpen(false)}
                                             className="sm:hidden px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded font-bold text-xs"
                                         >
                                             ✕ 關閉
                                         </button>
+                                    </div>
+                                    <div className="flex items-center bg-indigo-600 hover:bg-indigo-700 border border-indigo-500 rounded-xl px-2.5 py-1.5 shadow-sm transition-colors">
+                                        <select
+                                            value={addShapeSelectVal}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val) {
+                                                    addShape(val);
+                                                }
+                                                setAddShapeSelectVal("");
+                                            }}
+                                            className="w-full bg-transparent text-white font-bold text-xs sm:text-sm focus:outline-none cursor-pointer"
+                                            id="addShapeSelect"
+                                            title="選擇並新增形體"
+                                        >
+                                            <option value="" disabled className="bg-slate-800 text-indigo-300">＋ 點此選擇要新增的形體 ▾</option>
+                                            <option value="prism" className="bg-slate-800 text-white">＋ 角柱 (Prism)</option>
+                                            <option value="pyramid" className="bg-slate-800 text-white">＋ 角錐 (Pyramid)</option>
+                                            <option value="cylinder" className="bg-slate-800 text-white">＋ 圓柱 (Cylinder)</option>
+                                            <option value="cone" className="bg-slate-800 text-white">＋ 圓錐 (Cone)</option>
+                                            <option value="sphere" className="bg-slate-800 text-white">＋ 球體 (Sphere)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                                    <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                                        <IconSettings /> 幾何參數控制
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] text-slate-400">物件: {shapes.length} 個</span>
                                     </div>
                                 </div>
 
@@ -1431,25 +1719,8 @@
                                     {/* 渲染場景 */}
                                     {renderScene()}
 
-                                    {/* 形體上方浮動名稱標籤 */}
-                                    {shapes.map((s) => {
-                                        const pt = project3D(s.x * UNIT_SCALE, -(s.y * UNIT_SCALE + s.height * UNIT_SCALE + 20), s.z * UNIT_SCALE);
-                                        let label = "";
-                                        if (s.type === "prism") label = `${s.sides === 3 ? "三角柱" : s.sides === 4 ? "四角柱" : s.sides === 5 ? "五角柱" : s.sides + "角柱"}`;
-                                        else if (s.type === "pyramid") label = `${s.sides === 3 ? "三角錐" : s.sides === 4 ? "四角錐" : s.sides === 5 ? "五角錐" : s.sides + "角錐"}`;
-                                        else if (s.type === "cylinder") label = "圓柱";
-                                        else if (s.type === "cone") label = "圓錐";
-                                        else if (s.type === "sphere") label = "球體";
-
-                                        return (
-                                            <g key={`lbl-${s.id}`} className="pointer-events-none select-none">
-                                                <rect x={pt.x - 32} y={pt.y - 12} width="64" height="24" rx="12" fill="rgba(15, 23, 42, 0.9)" stroke="#6366f1" strokeWidth="1.5" />
-                                                <text x={pt.x} y={pt.y} fill="#ffffff" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                                    {label}
-                                                </text>
-                                            </g>
-                                        );
-                                    })}
+                                    {/* 形體側邊部位箭頭標註 (頂點、邊、側面) */}
+                                    {renderAnnotations()}
                                 </g>
                             </svg>
 

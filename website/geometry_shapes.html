@@ -185,12 +185,12 @@
             let tSide = root; for(let i=0; i<topAttach; i++) tSide = tSide.children[0];
             let bSide = root; for(let i=0; i<bottomAttach; i++) bSide = bSide.children[0];
             
-            bSide.children.push({
-                id: 'bottom', localPoints: createRegularPolygon(n, r), hue: 35, isBase: true, text: isSmooth ? '' : '下底\nBottom',
-                parentEdge: 0, childEdge: 0, foldAngle: Math.PI / 2, children: []
-            });
             tSide.children.push({
                 id: 'top', localPoints: createRegularPolygon(n, r), hue: 45, isBase: true, text: isSmooth ? '' : '上底\nTop',
+                parentEdge: 0, childEdge: 0, foldAngle: Math.PI / 2, children: []
+            });
+            bSide.children.push({
+                id: 'bottom', localPoints: createRegularPolygon(n, r), hue: 35, isBase: true, text: isSmooth ? '' : '下底\nBottom',
                 parentEdge: 2, childEdge: 0, foldAngle: Math.PI / 2, children: []
             });
             return root;
