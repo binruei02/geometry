@@ -359,44 +359,52 @@
                 setAutoRotate(false);
 
                 if (step === 0) {
-                    // 任務 1：柱體底面 (三角柱，方便觀察辨認 2 個底面，置於左側可視區中央)
+                    // 任務 1：柱體底面 (三角柱，方便觀察辨認 2 個底面，置於可視區中央)
                     const newId = 101;
+                    const rx = 28 * (Math.PI / 180);
+                    const ry = 35 * (Math.PI / 180);
                     setShapes([
-                        { id: newId, x: 0, z: 0, colorHue: 200, ...DEFAULT_PARAMS.prism, sides: 3, baseSize: 6, height: 10 }
+                        { id: newId, x: 0, y: 0, z: 0, rotX: rx, rotY: ry, colorHue: 200, ...DEFAULT_PARAMS.prism, sides: 3, baseSize: 6, height: 10 }
                     ]);
                     setSelectedShapeId(newId);
-                    setUserRotation({ x: 28 * (Math.PI / 180), y: 35 * (Math.PI / 180) });
+                    setUserRotation({ x: rx, y: ry });
                     setView({ x: 0, y: 0, scale: 1 });
                 } else if (step === 1) {
-                    // 任務 2：錐體底面 (四角錐，置於左側可視區中央)
+                    // 任務 2：錐體底面 (四角錐，置於可視區中央)
                     const newId = 102;
+                    const rx = 25 * (Math.PI / 180);
+                    const ry = 40 * (Math.PI / 180);
                     setShapes([
-                        { id: newId, x: 0, z: 0, colorHue: 30, ...DEFAULT_PARAMS.pyramid, sides: 4, baseSize: 6, height: 11 }
+                        { id: newId, x: 0, y: 0, z: 0, rotX: rx, rotY: ry, colorHue: 30, ...DEFAULT_PARAMS.pyramid, sides: 4, baseSize: 6, height: 11 }
                     ]);
                     setSelectedShapeId(newId);
-                    setUserRotation({ x: 25 * (Math.PI / 180), y: 40 * (Math.PI / 180) });
+                    setUserRotation({ x: rx, y: ry });
                     setView({ x: 0, y: 0, scale: 1 });
                 } else if (step === 2) {
-                    // 任務 3：五角柱與五角錐頂點邊數 (並列於左側開闊區域，避開右側 HUD 卡片遮擋)
+                    // 任務 3：五角柱與五角錐頂點邊數 (均勻並列於畫面左右)
                     const id1 = 103;
                     const id2 = 104;
+                    const rx = 22 * (Math.PI / 180);
+                    const ry = 30 * (Math.PI / 180);
                     setShapes([
-                        { id: id1, x: -10, z: 0, colorHue: 270, ...DEFAULT_PARAMS.prism, sides: 5, baseSize: 5, height: 10 },
-                        { id: id2, x: 10, z: 0, colorHue: 150, ...DEFAULT_PARAMS.pyramid, sides: 5, baseSize: 5, height: 11 }
+                        { id: id1, x: -14, y: 0, z: 0, rotX: rx, rotY: ry, colorHue: 270, ...DEFAULT_PARAMS.prism, sides: 5, baseSize: 5, height: 10 },
+                        { id: id2, x: 14, y: 0, z: 0, rotX: rx, rotY: ry, colorHue: 150, ...DEFAULT_PARAMS.pyramid, sides: 5, baseSize: 5, height: 11 }
                     ]);
                     setSelectedShapeId(id1);
-                    setUserRotation({ x: 22 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
+                    setUserRotation({ x: rx, y: ry });
                     setView({ x: 0, y: 0, scale: 1 });
                 } else if (step === 3) {
-                    // 任務 4：表面特性（圓柱與圓錐，並列於左側開闊區域）
+                    // 任務 4：表面特性（圓柱與圓錐，均勻並列於畫面左右）
                     const id1 = 105;
                     const id2 = 106;
+                    const rx = 20 * (Math.PI / 180);
+                    const ry = 30 * (Math.PI / 180);
                     setShapes([
-                        { id: id1, x: -10, z: 0, colorHue: 200, ...DEFAULT_PARAMS.cylinder, sides: 32, baseSize: 5, height: 10 },
-                        { id: id2, x: 10, z: 0, colorHue: 50, ...DEFAULT_PARAMS.cone, sides: 32, baseSize: 5, height: 11 }
+                        { id: id1, x: -14, y: 0, z: 0, rotX: rx, rotY: ry, colorHue: 200, ...DEFAULT_PARAMS.cylinder, sides: 32, baseSize: 5, height: 10 },
+                        { id: id2, x: 14, y: 0, z: 0, rotX: rx, rotY: ry, colorHue: 50, ...DEFAULT_PARAMS.cone, sides: 32, baseSize: 5, height: 11 }
                     ]);
                     setSelectedShapeId(id1);
-                    setUserRotation({ x: 20 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
+                    setUserRotation({ x: rx, y: ry });
                     setView({ x: 0, y: 0, scale: 1 });
                 }
             };
@@ -411,38 +419,53 @@
                 setAutoRotate(false);
                 if (preset === 'top') {
                     // 俯視：清楚看到上底面
-                    setUserRotation({ x: 65 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
+                    const rx = 65 * (Math.PI / 180);
+                    const ry = 30 * (Math.PI / 180);
+                    setUserRotation({ x: rx, y: ry });
+                    setShapes(prev => prev.map(s => (!selectedShapeId || s.id === selectedShapeId) ? { ...s, rotX: rx, rotY: ry } : s));
                 } else if (preset === 'bottom') {
                     // 仰視：清楚看到下底面
-                    setUserRotation({ x: -65 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
-                } else if (preset === 'front') {
-                    // 正面平視
-                    setUserRotation({ x: 5 * (Math.PI / 180), y: 0 });
-                } else if (preset === 'left') {
-                    // 向左轉 30 度
-                    setUserRotation(prev => ({ ...prev, y: prev.y - 30 * (Math.PI / 180) }));
-                } else if (preset === 'right') {
-                    // 向右轉 30 度
-                    setUserRotation(prev => ({ ...prev, y: prev.y + 30 * (Math.PI / 180) }));
+                    const rx = -65 * (Math.PI / 180);
+                    const ry = 30 * (Math.PI / 180);
+                    setUserRotation({ x: rx, y: ry });
+                    setShapes(prev => prev.map(s => (!selectedShapeId || s.id === selectedShapeId) ? { ...s, rotX: rx, rotY: ry } : s));
                 } else if (preset === 'reset') {
-                    // 重置標準視角 (依小檢核題型保持在開闊左側可視區)
-                    setUserRotation({ x: 25 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
-                    setView({ x: quizStep >= 2 ? -160 : -110, y: 0, scale: quizStep >= 2 ? 0.95 : 1 });
+                    const rx = 25 * (Math.PI / 180);
+                    const ry = 30 * (Math.PI / 180);
+                    setUserRotation({ x: rx, y: ry });
+                    setShapes(prev => prev.map(s => ({ ...s, rotX: rx, rotY: ry })));
+                    setView({ x: 0, y: 0, scale: 1 });
                 }
             };
 
-            // 形體位置微調（iPad 上按按鈕即可移動，不用拖曳）
-            const nudgeShape = (dx, dy, dz) => {
-                if (!selectedShapeId) return;
-                setShapes(prev => prev.map(s => {
-                    if (s.id !== selectedShapeId) return s;
-                    return {
-                        ...s,
-                        x: s.x + dx,
-                        y: Math.max(0, s.y + dy),
-                        z: s.z + dz
-                    };
-                }));
+            // 依據畫面上的形體數量，將所有形體均勻排列在畫面上
+            const arrangeShapes = () => {
+                setView({ x: 0, y: 0, scale: 1 });
+                setShapes(prev => {
+                    const n = prev.length;
+                    if (n === 0) return prev;
+                    if (n === 1) {
+                        return prev.map(s => ({ ...s, x: 0, y: 0, z: 0 }));
+                    }
+                    if (n === 2) {
+                        return prev.map((s, i) => ({ ...s, x: i === 0 ? -14 : 14, y: 0, z: 0 }));
+                    }
+                    if (n === 3) {
+                        return prev.map((s, i) => ({ ...s, x: (i - 1) * 20, y: 0, z: 0 }));
+                    }
+                    // 4 個以上分上下兩排均勻排列
+                    const topCount = Math.ceil(n / 2);
+                    const botCount = n - topCount;
+                    return prev.map((s, i) => {
+                        const isTop = i < topCount;
+                        const rowIdx = isTop ? i : i - topCount;
+                        const rowTotal = isTop ? topCount : botCount;
+                        const spanX = Math.min(24, (rowTotal - 1) * 11);
+                        const posX = rowTotal === 1 ? 0 : -spanX + (rowIdx * (2 * spanX)) / (rowTotal - 1);
+                        const posY = isTop ? -10 : 10;
+                        return { ...s, x: Math.round(posX * 10) / 10, y: posY, z: 0 };
+                    });
+                });
             };
 
             const resetShapePos = () => {
@@ -454,7 +477,9 @@
             const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
             const [viewStart, setViewStart] = useState({ x: 0, y: 0 });
             const [rotationStart, setRotationStart] = useState({ x: 0, y: 0 });
-            const [shapeStartPos, setShapeStartPos] = useState({ x: 0, z: 0, y: 0 }); 
+            const [shapeStartPos, setShapeStartPos] = useState({ x: 0, z: 0, y: 0 });
+            const dragMovedRef = useRef(false);
+            const activeDragShapeIdRef = useRef(null);
 
             const svgRef = useRef(null);
 
@@ -463,7 +488,30 @@
             const CY = 300;
             const FOCAL_LENGTH = 3500; 
 
-            // --- 投影函數 ---
+            // --- 個別形體獨立 3D 旋轉 + 2D 畫面座標投影函數 (避免 3D 位移造成形體消失) ---
+            const projectShape3D = (s, lx, ly, lz) => {
+                const rx = s && s.rotX !== undefined ? s.rotX : userRotation.x;
+                const ry = s && s.rotY !== undefined ? s.rotY : userRotation.y;
+
+                const x1 = lx * Math.cos(ry) - lz * Math.sin(ry);
+                const z1 = lx * Math.sin(ry) + lz * Math.cos(ry);
+                
+                const y2 = ly * Math.cos(rx) - z1 * Math.sin(rx);
+                const z2 = ly * Math.sin(rx) + z1 * Math.cos(rx);
+                
+                const scale = FOCAL_LENGTH / (FOCAL_LENGTH + z2);
+                const screenX = CX + ((s && s.x) || 0) * UNIT_SCALE;
+                const screenY = CY + ((s && s.y) || 0) * UNIT_SCALE;
+                
+                return { 
+                    x: screenX + x1 * scale, 
+                    y: screenY + y2 * scale, 
+                    z: z2,
+                    scale: scale 
+                };
+            };
+
+            // --- 投影函數 (供背景格線座標軸使用) ---
             const project3D = (x, y, z) => {
                 let x1 = x * Math.cos(userRotation.y) - z * Math.sin(userRotation.y);
                 let z1 = x * Math.sin(userRotation.y) + z * Math.cos(userRotation.y);
@@ -484,19 +532,39 @@
             // --- 形體操作 ---
             const addShape = (type) => {
                 const newId = Date.now();
+                const rx = 25 * (Math.PI / 180);
+                const ry = 30 * (Math.PI / 180);
                 setShapes(prev => {
-                    const offsetX = prev.length > 0 ? (prev.length % 2 === 1 ? 12 : -12) : 0;
-                    const newShape = {
-                        id: newId,
-                        x: offsetX, 
-                        z: 0,
-                        colorHue: PASTEL_COLORS[Math.floor(Math.random() * 6)].hue, 
-                        ...DEFAULT_PARAMS[type]
-                    };
-                    return [...prev, newShape];
+                    const nextList = [
+                        ...prev,
+                        {
+                            id: newId,
+                            x: 0,
+                            y: 0,
+                            z: 0,
+                            rotX: rx,
+                            rotY: ry,
+                            colorHue: PASTEL_COLORS[Math.floor(Math.random() * 6)].hue,
+                            ...DEFAULT_PARAMS[type]
+                        }
+                    ];
+                    const n = nextList.length;
+                    if (n === 1) return nextList.map(s => ({ ...s, x: 0, y: 0 }));
+                    if (n === 2) return nextList.map((s, i) => ({ ...s, x: i === 0 ? -14 : 14, y: 0 }));
+                    if (n === 3) return nextList.map((s, i) => ({ ...s, x: (i - 1) * 20, y: 0 }));
+                    const topCount = Math.ceil(n / 2);
+                    const botCount = n - topCount;
+                    return nextList.map((s, i) => {
+                        const isTop = i < topCount;
+                        const rowIdx = isTop ? i : i - topCount;
+                        const rowTotal = isTop ? topCount : botCount;
+                        const spanX = Math.min(24, (rowTotal - 1) * 11);
+                        const posX = rowTotal === 1 ? 0 : -spanX + (rowIdx * (2 * spanX)) / (rowTotal - 1);
+                        const posY = isTop ? -10 : 10;
+                        return { ...s, x: Math.round(posX * 10) / 10, y: posY };
+                    });
                 });
                 setSelectedShapeId(newId);
-                setInteractionMode('moveItem'); 
             };
 
             const removeShape = (id, e) => {
@@ -520,76 +588,104 @@
                 const newShape = {
                     ...original,
                     id: newId,
-                    x: original.x + 3, // 稍微位移，單位 cm
-                    z: original.z + 3
+                    x: Math.max(-28, Math.min(28, (original.x || 0) + 6)),
+                    y: Math.max(-18, Math.min(18, (original.y || 0) + 4))
                 };
 
                 setShapes([...shapes, newShape]);
                 setSelectedShapeId(newId);
-                setInteractionMode('moveItem');
             };
 
             const updateSelectedShape = (key, value) => {
-                setShapes(shapes.map(s => s.id === selectedShapeId ? { ...s, [key]: value } : s));
+                setShapes(prev => prev.map(s => s.id === selectedShapeId ? { ...s, [key]: value } : s));
             };
 
             const resetView = () => {
+                const rx = 25 * (Math.PI / 180);
+                const ry = 30 * (Math.PI / 180);
                 setView({ x: 0, y: 0, scale: 1 });
-                setUserRotation({ x: 25 * (Math.PI / 180), y: 30 * (Math.PI / 180) });
+                setUserRotation({ x: rx, y: ry });
+                setShapes(prev => prev.map(s => ({ ...s, rotX: rx, rotY: ry })));
+            };
+
+            // 啟動指定形體或當前選取形體的拖曳/旋轉手勢
+            const startPointerAction = (clientX, clientY, targetShapeId = null) => {
+                const activeId = targetShapeId || selectedShapeId || (shapes[0] && shapes[0].id);
+                if (targetShapeId && targetShapeId !== selectedShapeId) {
+                    setSelectedShapeId(targetShapeId);
+                }
+                activeDragShapeIdRef.current = activeId;
+                dragMovedRef.current = false;
+                setIsDragging(true);
+                setDragStart({ x: clientX, y: clientY });
+                setViewStart({ ...view });
+
+                const targetShape = shapes.find(s => s.id === activeId);
+                if (targetShape) {
+                    setShapeStartPos({ x: targetShape.x || 0, y: targetShape.y || 0, z: targetShape.z || 0 });
+                    setRotationStart({
+                        x: targetShape.rotX !== undefined ? targetShape.rotX : userRotation.x,
+                        y: targetShape.rotY !== undefined ? targetShape.rotY : userRotation.y
+                    });
+                } else {
+                    setRotationStart({ ...userRotation });
+                }
+            };
+
+            const applyPointerMove = (clientX, clientY) => {
+                if (!isDragging) return;
+                const dx = clientX - dragStart.x;
+                const dy = clientY - dragStart.y;
+                if (Math.hypot(dx, dy) > 5) {
+                    dragMovedRef.current = true;
+                }
+
+                const targetId = activeDragShapeIdRef.current || selectedShapeId;
+                if (!targetId) return;
+
+                if (interactionMode === 'moveItem') {
+                    // 2D 畫面平面直覺拖曳位置，並限制在畫布安全可視範圍內，絕不消失
+                    const svgEl = svgRef.current;
+                    const rect = svgEl ? svgEl.getBoundingClientRect() : { width: 800, height: 600 };
+                    const svgScale = Math.min(rect.width / 800, rect.height / 600) * (view.scale || 1);
+                    const deltaXCm = (dx / (svgScale || 1)) / UNIT_SCALE;
+                    const deltaYCm = (dy / (svgScale || 1)) / UNIT_SCALE;
+
+                    const clampedX = Math.max(-30, Math.min(30, shapeStartPos.x + deltaXCm));
+                    const clampedY = Math.max(-18, Math.min(18, shapeStartPos.y + deltaYCm));
+
+                    setShapes(prev => prev.map(s => s.id === targetId ? { ...s, x: clampedX, y: clampedY } : s));
+                } else if (interactionMode === 'rotate') {
+                    // 點選物件後：上下拖拉 = 上下旋轉物件 (rotX)，左右拖拉 = 左右旋轉物件 (rotY)
+                    const ROTATION_SPEED = 0.008;
+                    const newRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotationStart.x + dy * ROTATION_SPEED));
+                    const newRotY = rotationStart.y - dx * ROTATION_SPEED;
+
+                    setShapes(prev => prev.map(s => s.id === targetId ? { ...s, rotX: newRotX, rotY: newRotY } : s));
+                }
             };
 
             // --- 互動事件處理 ---
             const handleMouseDown = (e) => {
                 if (e.button !== 0) return;
-                setIsDragging(true);
-                setDragStart({ x: e.clientX, y: e.clientY });
-                setViewStart({ ...view });
-                setRotationStart({ ...userRotation });
-                
-                const selected = shapes.find(s => s.id === selectedShapeId);
-                if (selected) setShapeStartPos({ x: selected.x, z: selected.z, y: selected.y });
+                startPointerAction(e.clientX, e.clientY, null);
             };
 
             const handleMouseMove = (e) => {
                 if (!isDragging) return;
                 e.preventDefault();
-                const dx = e.clientX - dragStart.x;
-                const dy = e.clientY - dragStart.y;
-
-                if (interactionMode === 'pan') {
-                    setView(prev => ({ ...prev, x: viewStart.x + dx, y: viewStart.y + dy }));
-                } else if (interactionMode === 'rotate') {
-                    const ROTATION_SPEED = 0.005;
-                    setUserRotation({
-                        x: Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationStart.x + dy * ROTATION_SPEED)), 
-                        y: rotationStart.y - dx * ROTATION_SPEED
-                    });
-                } else if (interactionMode === 'moveItem' && selectedShapeId) {
-                    const cos = Math.cos(userRotation.y);
-                    const sin = Math.sin(userRotation.y);
-                    const scaleFactor = (1.5 / view.scale) / UNIT_SCALE; 
-                    const speed = 10.0;
-                    
-                    const worldDx = (dx * cos - dy * sin) * scaleFactor * speed;
-                    const worldDz = (dx * sin + dy * cos) * scaleFactor * speed;
-                    
-                    updateSelectedShape('x', shapeStartPos.x + worldDx);
-                    updateSelectedShape('z', shapeStartPos.z - worldDz);
-                } else if (interactionMode === 'liftItem' && selectedShapeId) {
-                    const scaleFactor = (2 / view.scale) / UNIT_SCALE; 
-                    const speed = 10.0;
-                    const deltaHeight = -dy * scaleFactor * speed; 
-                    const newY = Math.max(0, Math.min(100, shapeStartPos.y + deltaHeight)); 
-                    updateSelectedShape('y', newY);
-                }
+                applyPointerMove(e.clientX, e.clientY);
             };
 
-            const handleMouseUp = () => setIsDragging(false);
+            const handleMouseUp = () => {
+                setIsDragging(false);
+                activeDragShapeIdRef.current = null;
+            };
 
             const handleWheel = (e) => {
                 e.preventDefault();
                 const scaleAmount = -e.deltaY * 0.001;
-                const newScale = Math.max(0.1, Math.min(view.scale + scaleAmount, 10)); 
+                const newScale = Math.max(0.4, Math.min(view.scale + scaleAmount, 3)); 
                 setView(prev => ({ ...prev, scale: newScale }));
             };
             
@@ -600,12 +696,7 @@
                     const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
                     pinchRef.current = { dist, scale: view.scale };
                 } else if (e.touches.length === 1) {
-                    setIsDragging(true);
-                    setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-                    setViewStart({ ...view });
-                    setRotationStart({ ...userRotation });
-                    const selected = shapes.find(s => s.id === selectedShapeId);
-                    if (selected) setShapeStartPos({ x: selected.x, z: selected.z, y: selected.y });
+                    startPointerAction(e.touches[0].clientX, e.touches[0].clientY, null);
                 }
             };
 
@@ -617,40 +708,11 @@
                     const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
                     if (pinchRef.current.dist > 0) {
                         const factor = dist / pinchRef.current.dist;
-                        const newScale = Math.max(0.2, Math.min(pinchRef.current.scale * factor, 5));
+                        const newScale = Math.max(0.4, Math.min(pinchRef.current.scale * factor, 3));
                         setView(v => ({ ...v, scale: newScale }));
                     }
                 } else if (isDragging && e.touches.length === 1) {
-                    const clientX = e.touches[0].clientX;
-                    const clientY = e.touches[0].clientY;
-                    
-                    const dx = clientX - dragStart.x;
-                    const dy = clientY - dragStart.y;
-
-                    if (interactionMode === 'pan') {
-                        setView(prev => ({ ...prev, x: viewStart.x + dx, y: viewStart.y + dy }));
-                    } else if (interactionMode === 'rotate') {
-                        const ROTATION_SPEED = 0.005;
-                        setUserRotation({
-                            x: Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationStart.x + dy * ROTATION_SPEED)), 
-                            y: rotationStart.y - dx * ROTATION_SPEED
-                        });
-                    } else if (interactionMode === 'moveItem' && selectedShapeId) {
-                        const cos = Math.cos(userRotation.y);
-                        const sin = Math.sin(userRotation.y);
-                        const scaleFactor = (1.5 / view.scale) / UNIT_SCALE; 
-                        const speed = 10.0;
-                        const worldDx = (dx * cos - dy * sin) * scaleFactor * speed;
-                        const worldDz = (dx * sin + dy * cos) * scaleFactor * speed;
-                        updateSelectedShape('x', shapeStartPos.x + worldDx);
-                        updateSelectedShape('z', shapeStartPos.z - worldDz);
-                    } else if (interactionMode === 'liftItem' && selectedShapeId) {
-                        const scaleFactor = (2 / view.scale) / UNIT_SCALE; 
-                        const speed = 10.0;
-                        const deltaHeight = -dy * scaleFactor * speed; 
-                        const newY = Math.max(0, Math.min(100, shapeStartPos.y + deltaHeight));
-                        updateSelectedShape('y', newY);
-                    }
+                    applyPointerMove(e.touches[0].clientX, e.touches[0].clientY);
                 }
             };
 
@@ -661,14 +723,11 @@
                 handleMouseUp();
             };
             
-            // --- 幾何生成 ---
+            // --- 幾何生成 (局部中心座標以原點 (0,0,0) 為中心，再由 projectShape3D 獨立旋轉與 2D 畫面定位) ---
             const generateShapePolygons = (shape) => {
                 const scale = UNIT_SCALE;
-                const { id, type, sides, baseSize, height: heightCm, colorHue, x: xCm, z: zCm, y: yCm } = shape;
+                const { id, type, sides, baseSize, height: heightCm, colorHue } = shape;
                 
-                const worldX = xCm * scale;
-                const worldZ = zCm * scale;
-                const elevation = yCm * scale;
                 const height = heightCm * scale;
 
                 const isSmooth = type === 'cylinder' || type === 'cone' || type === 'sphere';
@@ -697,11 +756,11 @@
 
                 // --- 1. 球體 (Sphere) ---
                 if (type === 'sphere') {
-                    const sphereCenterY = -(elevation + radius);
-                    const centerPoint = { x: worldX, y: sphereCenterY, z: worldZ };
+                    const centerPoint = { x: 0, y: 0, z: 0 };
                     
                     polygons.push({
                         shapeId: id,
+                        shapeRef: shape,
                         type: 'sphere',
                         center: centerPoint,
                         radius: radius,
@@ -714,15 +773,15 @@
                 
                 // --- 2. 柱體 (Prism / Cylinder) ---
                 else if (type === 'prism' || type === 'cylinder') {
-                    const bottomY = -elevation;
-                    const topY = -elevation - height;
+                    const bottomY = height / 2;
+                    const topY = -height / 2;
                     const bottomPts = [];
                     const topPts = [];
 
                     for(let i=0; i<renderSides; i++) {
                         const angle = (2 * Math.PI * i) / renderSides - Math.PI/2;
-                        const x = worldX + radius * Math.cos(angle);
-                        const z = worldZ + radius * Math.sin(angle);
+                        const x = radius * Math.cos(angle);
+                        const z = radius * Math.sin(angle);
                         bottomPts.push({ x, y: bottomY, z });
                         topPts.push({ x, y: topY, z });
                     }
@@ -733,6 +792,7 @@
                         const faceLightness = 75 + (i % 2) * 5; 
                         polygons.push({
                             shapeId: id,
+                            shapeRef: shape,
                             partType: 'side',
                             sideIndex: i,
                             points: [topPts[i], topPts[next], bottomPts[next], bottomPts[i]],
@@ -742,24 +802,24 @@
                         });
                     }
                     // 頂底面
-                    polygons.push({ shapeId: id, partType: 'bottom', points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
-                    polygons.push({ shapeId: id, partType: 'top', points: topPts, color: baseFillColor(80), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                    polygons.push({ shapeId: id, shapeRef: shape, partType: 'bottom', points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                    polygons.push({ shapeId: id, shapeRef: shape, partType: 'top', points: topPts, color: baseFillColor(80), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
                 }
                 
                 // --- 3. 錐體 (Pyramid / Cone) ---
                 else if (type === 'pyramid' || type === 'cone') {
-                    const bottomY = -elevation;
-                    const apexY = -elevation - height;
-                    const apexPoint = { x: worldX, y: apexY, z: worldZ };
+                    const bottomY = height / 2;
+                    const apexY = -height / 2;
+                    const apexPoint = { x: 0, y: apexY, z: 0 };
                     const bottomPts = [];
 
                     for(let i=0; i<renderSides; i++) {
                         const angle = (2 * Math.PI * i) / renderSides - Math.PI/2;
-                        bottomPts.push({ x: worldX + radius * Math.cos(angle), y: bottomY, z: worldZ + radius * Math.sin(angle) });
+                        bottomPts.push({ x: radius * Math.cos(angle), y: bottomY, z: radius * Math.sin(angle) });
                     }
 
                     // 底面
-                    polygons.push({ shapeId: id, partType: 'bottom', points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
+                    polygons.push({ shapeId: id, shapeRef: shape, partType: 'bottom', points: bottomPts, color: baseFillColor(65), stroke: isSmooth ? 'none' : strokeColor, strokeWidth });
 
                     // 側面
                     for(let i=0; i<renderSides; i++) {
@@ -767,6 +827,7 @@
                         const faceLightness = 75 + (i % 2) * 5;
                         polygons.push({
                             shapeId: id,
+                            shapeRef: shape,
                             partType: 'side',
                             sideIndex: i,
                             points: [bottomPts[i], bottomPts[next], apexPoint],
@@ -790,8 +851,9 @@
                 let allPolys = shapes.flatMap(generateShapePolygons);
 
                 const projectedPolys = allPolys.map(poly => {
+                    const sRef = poly.shapeRef;
                     if (poly.type === 'sphere') {
-                        const projCenter = project3D(poly.center.x, poly.center.y, poly.center.z);
+                        const projCenter = projectShape3D(sRef, poly.center.x, poly.center.y, poly.center.z);
                         const projRadius = poly.radius * projCenter.scale;
                         
                         return {
@@ -801,7 +863,7 @@
                             zIndex: projCenter.z - poly.radius * 0.5 
                         };
                     } else {
-                        const projPoints = poly.points.map(p => project3D(p.x, p.y, p.z));
+                        const projPoints = poly.points.map(p => projectShape3D(sRef, p.x, p.y, p.z));
                         const zSum = projPoints.reduce((sum, p) => sum + p.z, 0);
                         const zAvg = zSum / projPoints.length;
                         return {
@@ -817,14 +879,28 @@
 
                 return projectedPolys.map((poly, index) => {
                     const onClick = (e) => {
-                        handleFaceClick(poly, e);
+                        if (!dragMovedRef.current) {
+                            handleFaceClick(poly, e);
+                        }
+                    };
+                    const onShapeMouseDown = (e) => {
+                        if (e.button === 0) {
+                            e.stopPropagation();
+                            startPointerAction(e.clientX, e.clientY, poly.shapeId);
+                        }
+                    };
+                    const onShapeTouchStart = (e) => {
+                        if (e.touches && e.touches.length === 1) {
+                            e.stopPropagation();
+                            startPointerAction(e.touches[0].clientX, e.touches[0].clientY, poly.shapeId);
+                        }
                     };
 
                     const style = {};
 
                     if (poly.type === 'sphere') {
                         return (
-                            <g key={`sphere-${index}`} onClick={onClick} style={style}>
+                            <g key={`sphere-${index}`} onClick={onClick} onMouseDown={onShapeMouseDown} onTouchStart={onShapeTouchStart} style={style}>
                                 <circle 
                                     cx={poly.projCenter.x} 
                                     cy={poly.projCenter.y} 
@@ -866,6 +942,8 @@
                                 strokeWidth={strokeWidth}
                                 strokeLinejoin="round"
                                 onClick={onClick}
+                                onMouseDown={onShapeMouseDown}
+                                onTouchStart={onShapeTouchStart}
                                 style={style}
                                 className="hover:opacity-90 transition-opacity cursor-pointer"
                             />
@@ -893,9 +971,6 @@
                     if (s.type === 'sphere') return null;
 
                     const scale = UNIT_SCALE;
-                    const worldX = s.x * scale;
-                    const worldZ = s.z * scale;
-                    const elevation = s.y * scale;
                     const height = s.height * scale;
                     const isSmooth = s.type === 'cylinder' || s.type === 'cone';
                     const renderSides = isSmooth ? 32 : s.sides;
@@ -903,19 +978,19 @@
                         ? s.baseSize * scale
                         : (s.baseSize * scale) / (2 * Math.sin(Math.PI / renderSides));
 
-                    const bottomY = -elevation;
-                    const topY = -elevation - height;
+                    const bottomY = height / 2;
+                    const topY = -height / 2;
                     const bottomPts = [];
                     const topPts = [];
 
                     for (let i = 0; i < renderSides; i++) {
                         const angle = (2 * Math.PI * i) / renderSides - Math.PI / 2;
-                        const px = worldX + radius * Math.cos(angle);
-                        const pz = worldZ + radius * Math.sin(angle);
-                        bottomPts.push(project3D(px, bottomY, pz));
-                        topPts.push(project3D(px, topY, pz));
+                        const px = radius * Math.cos(angle);
+                        const pz = radius * Math.sin(angle);
+                        bottomPts.push(projectShape3D(s, px, bottomY, pz));
+                        topPts.push(projectShape3D(s, px, topY, pz));
                     }
-                    const apexPt = project3D(worldX, topY, worldZ);
+                    const apexPt = projectShape3D(s, 0, topY, 0);
 
                     const allPts = (s.type === 'prism' || s.type === 'cylinder')
                         ? [...bottomPts, ...topPts]
@@ -1023,7 +1098,7 @@
                                 bestIdx = i;
                             }
                         });
-                        const midCenter = project3D(worldX, (topY + bottomY) / 2, worldZ);
+                        const midCenter = projectShape3D(s, 0, (topY + bottomY) / 2, 0);
                         const sideFacePt = {
                             x: (topPts[bestIdx].x + bottomPts[bestIdx].x) * 0.38 + midCenter.x * 0.24,
                             y: (topPts[bestIdx].y + bottomPts[bestIdx].y) * 0.5
@@ -1042,7 +1117,7 @@
                             }
                         });
                         highlightVertex = apexPt;
-                        const botCenter = project3D(worldX, bottomY, worldZ);
+                        const botCenter = projectShape3D(s, 0, bottomY, 0);
                         const sideFacePt = {
                             x: apexPt.x * 0.35 + bottomPts[bestIdx].x * 0.48 + botCenter.x * 0.17,
                             y: apexPt.y * 0.35 + bottomPts[bestIdx].y * 0.65
@@ -1637,13 +1712,18 @@
                                         </div>
                                     </div>
 
-                                    {/* 位置座標快速滑桿與置中 */}
+                                    {/* 位置座標快速滑桿與均勻排列 */}
                                     <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5">
                                         <div className="flex justify-between items-center">
-                                            <span className="font-bold text-slate-700">水平位置 (X: {Math.round(selectedShape.x)})</span>
-                                            <button onClick={resetShapePos} className="text-[10px] text-indigo-600 bg-white px-1.5 py-0.5 rounded border border-indigo-200 hover:bg-indigo-50 font-bold">
-                                                置中 (0,0)
-                                            </button>
+                                            <span className="font-bold text-slate-700">畫面位置 ({Math.round(selectedShape.x)}, {Math.round(selectedShape.y)})</span>
+                                            <div className="flex gap-1">
+                                                <button onClick={arrangeShapes} className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 hover:bg-emerald-100 font-bold">
+                                                    均勻排列
+                                                </button>
+                                                <button onClick={resetShapePos} className="text-[10px] text-indigo-600 bg-white px-1.5 py-0.5 rounded border border-indigo-200 hover:bg-indigo-50 font-bold">
+                                                    置中
+                                                </button>
+                                            </div>
                                         </div>
                                         <input 
                                             type="range" min="-30" max="30" value={selectedShape.x} 
@@ -1667,7 +1747,7 @@
                                     {shapes.map((s, idx) => (
                                         <button
                                             key={s.id}
-                                            onClick={() => { setSelectedShapeId(s.id); setInteractionMode("moveItem"); }}
+                                            onClick={() => setSelectedShapeId(s.id)}
                                             className={`px-2 py-0.5 rounded text-[11px] font-bold border transition-colors ${selectedShapeId === s.id ? "bg-indigo-600 text-white border-indigo-600" : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"}`}
                                         >
                                             {SHAPE_NAMES[s.type]} {idx + 1}
@@ -1726,22 +1806,23 @@
                                 className="absolute left-2 right-2 sm:left-3 sm:right-3 z-30 flex flex-col items-center gap-1.5 pointer-events-none"
                             >
                                 {/* iPad / 手機貼心操作提示 */}
-                                {quizOpen && (quizStep === 0 || quizStep === 1) && (
-                                    <div className="pointer-events-auto bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl shadow-xl border border-amber-300 text-xs flex items-center gap-1.5 backdrop-blur-md animate-fadeIn">
-                                        <span>💡 點擊【👀 看上底/下底】自動翻轉；👉 向右滑動工具列可使用旋轉與微調！</span>
-                                    </div>
-                                )}
+                                <div className="pointer-events-auto bg-slate-900/90 text-amber-300 font-bold px-3 py-1 rounded-xl shadow-lg border border-slate-700 text-[11px] sm:text-xs flex items-center gap-1.5 backdrop-blur-md">
+                                    {interactionMode === 'moveItem' ? (
+                                        <span>✋ 拖曳位置模式：直接點選形體並用手指或滑鼠拖動位置（也可點「均勻排列」自動排好）</span>
+                                    ) : (
+                                        <span>🔄 旋轉物件模式：點選形體後「上下拖拉」上下旋轉、「左右拖拉」左右旋轉</span>
+                                    )}
+                                </div>
 
-                                {/* 單行橫向捲動操作列 (最右側常駐滑動引導按鈕：一開始即可看到，引導使用者發現更多工具) */}
+                                {/* 單行橫向捲動操作列 */}
                                 <div className="w-full flex items-center justify-center pointer-events-none max-w-full relative px-2">
                                     <div className="pointer-events-auto flex items-center gap-1.5 max-w-full w-full justify-center">
                                         <div 
                                             id="shapeToolbar" 
                                             ref={toolbarRef}
                                             onScroll={checkToolbarScroll}
-                                            className="flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md px-2.5 py-1.5 rounded-2xl shadow-2xl border border-slate-700 text-white min-w-0 overflow-x-auto no-scrollbar scroll-smooth"
+                                            className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/95 backdrop-blur-md px-2.5 sm:px-3 py-1.5 rounded-2xl shadow-2xl border border-slate-700 text-white min-w-0 overflow-x-auto no-scrollbar scroll-smooth"
                                         >
-                                            <span className="text-[11px] font-bold text-slate-400 mr-0.5 hidden md:inline whitespace-nowrap">視角：</span>
                                             <button
                                                 onClick={() => setCameraPreset("top")}
                                                 className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1 transition-all whitespace-nowrap shrink-0"
@@ -1758,43 +1839,41 @@
                                             >
                                                 👀 看下底
                                             </button>
-                                            <button
-                                                onClick={() => setCameraPreset("left")}
-                                                className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all whitespace-nowrap shrink-0"
-                                                title="向左轉 30 度"
-                                            >
-                                                ↺ 左轉
-                                            </button>
-                                            <button
-                                                onClick={() => setCameraPreset("right")}
-                                                className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all whitespace-nowrap shrink-0"
-                                                title="向右轉 30 度"
-                                            >
-                                                ↻ 右轉
-                                            </button>
-                                            <button
-                                                onClick={() => setAutoRotate(prev => !prev)}
-                                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 whitespace-nowrap shrink-0 ${autoRotate ? "bg-indigo-600 text-white ring-2 ring-indigo-300" : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"}`}
-                                                title="形體自動自轉"
-                                            >
-                                                {autoRotate ? "⏸️ 停止" : "▶️ 自轉"}
-                                            </button>
-                                            <button
-                                                onClick={() => setCameraPreset("reset")}
-                                                className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 transition-all whitespace-nowrap shrink-0"
-                                                title="重置為標準 3D 視角"
-                                            >
-                                                ↺ 重置
-                                            </button>
 
-                                            {/* 微調方向鍵 (在窄螢幕緊隨其後，橫向滑動即可直接點選) */}
-                                            <div className="flex items-center gap-1 pl-1 border-l border-slate-700 shrink-0">
-                                                <button onClick={() => nudgeShape(-15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向左移">←</button>
-                                                <button onClick={() => nudgeShape(15, 0, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向右移">→</button>
-                                                <button onClick={() => nudgeShape(0, 15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向上升">↑</button>
-                                                <button onClick={() => nudgeShape(0, -15, 0)} className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg text-xs font-bold border border-slate-700" title="向下降">↓</button>
-                                                <button onClick={resetShapePos} className="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 active:scale-95 rounded-lg text-xs font-bold border border-indigo-700" title="置中">🎯</button>
-                                            </div>
+                                            <div className="h-5 w-px bg-slate-700 shrink-0 mx-0.5" />
+
+                                            <button
+                                                onClick={() => setInteractionMode("moveItem")}
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1 active:scale-95 whitespace-nowrap shrink-0 ${
+                                                    interactionMode === "moveItem"
+                                                        ? "bg-indigo-600 text-white ring-2 ring-indigo-300"
+                                                        : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                                                }`}
+                                                title="選取物件後，以手指或滑鼠直接拖動物件位置"
+                                                id="btnDragPos"
+                                            >
+                                                ✋ 拖曳位置
+                                            </button>
+                                            <button
+                                                onClick={() => setInteractionMode("rotate")}
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1 active:scale-95 whitespace-nowrap shrink-0 ${
+                                                    interactionMode === "rotate"
+                                                        ? "bg-indigo-600 text-white ring-2 ring-indigo-300"
+                                                        : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                                                }`}
+                                                title="點選物件後，上下拖拉可上下旋轉物件，左右拖拉可左右旋轉物件"
+                                                id="btnRotateObj"
+                                            >
+                                                🔄 旋轉物件
+                                            </button>
+                                            <button
+                                                onClick={arrangeShapes}
+                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1 transition-all whitespace-nowrap shrink-0"
+                                                title="依據目前畫面上的形體數量，自動均勻排列在畫面上"
+                                                id="btnArrangeEvenly"
+                                            >
+                                                📐 均勻排列
+                                            </button>
                                         </div>
 
                                         {/* 常駐最右側的「滑動更多 ❯」引導按鈕：一開始即可看到！ */}
