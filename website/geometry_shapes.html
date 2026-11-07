@@ -722,7 +722,7 @@
                         if (actualPrismNet === 'strip') {
                             return (
                                 <g className="pointer-events-none select-none" opacity={annotOpacity}>
-                                    {/* 框選整個角柱側面大長方形 */}
+                                    {/* 框選整個角柱側面區域 */}
                                     <rect
                                         x={minX - 6}
                                         y={minY - 6}
@@ -734,27 +734,27 @@
                                         strokeWidth="3.5"
                                         strokeDasharray="8 5"
                                     />
-                                    {/* 側面大長方形醒目提示標籤 */}
+                                    {/* 側面區域提示標籤（不洩漏形狀答案） */}
                                     <g transform={`translate(${midX}, ${maxY - 18})`}>
-                                        <rect x="-132" y="-12" width="264" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
+                                        <rect x="-56" y="-12" width="112" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
                                         <text x="0" y="0" fill="#67e8f9" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                            📦 側面區域（合起來為一個大長方形）
+                                            📦 側面區域
                                         </text>
                                     </g>
-                                    {/* 右側標示「寬（＝柱高）」 */}
+                                    {/* 右側標示「寬」 */}
                                     <g>
                                         <line x1={maxX + 18} y1={minY} x2={maxX + 18} y2={maxY} stroke="#fbbf24" strokeWidth="2.5" />
                                         <polygon points={`${maxX + 18},${minY} ${maxX + 14},${minY + 8} ${maxX + 22},${minY + 8}`} fill="#fbbf24" />
                                         <polygon points={`${maxX + 18},${maxY} ${maxX + 14},${maxY - 8} ${maxX + 22},${maxY - 8}`} fill="#fbbf24" />
-                                        <rect x={maxX + 26} y={midY - 12} width="96" height="24" rx="6" fill="rgba(15, 23, 42, 0.92)" stroke="#fbbf24" strokeWidth="1.5" />
-                                        <text x={maxX + 74} y={midY} fill="#fde68a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                            ↕ 寬＝柱高
+                                        <rect x={maxX + 26} y={midY - 12} width="54" height="24" rx="6" fill="rgba(15, 23, 42, 0.92)" stroke="#fbbf24" strokeWidth="1.5" />
+                                        <text x={maxX + 53} y={midY} fill="#fde68a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                            ↕ 寬
                                         </text>
                                     </g>
                                 </g>
                             );
                         } else {
-                            // 星形展開：框選每個長方形側面
+                            // 星形展開：框選每個側面
                             return (
                                 <g className="pointer-events-none select-none" opacity={annotOpacity}>
                                     {sideFaces.map((sf, i) => {
@@ -762,9 +762,9 @@
                                         return <path key={`pstar-${i}`} d={d} fill="none" stroke="#22d3ee" strokeWidth="3" strokeDasharray="6 4" />;
                                     })}
                                     <g transform={`translate(${midX}, ${maxY + 26})`}>
-                                        <rect x="-115" y="-12" width="230" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
+                                        <rect x="-88" y="-12" width="176" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
                                         <text x="0" y="0" fill="#67e8f9" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                            📦 虛線框選處皆為「側面（長方形）」
+                                            📦 虛線框選處皆為「側面」
                                         </text>
                                     </g>
                                 </g>
@@ -783,7 +783,7 @@
 
                         return (
                             <g className="pointer-events-none select-none" opacity={annotOpacity}>
-                                {/* 上底與下底圓形標示與圓周虛線框 */}
+                                {/* 上底與下底標示與虛線框 */}
                                 {baseFaces.map((bf, bIdx) => {
                                     const bx = bf.projPts.reduce((s, p) => s + p.x, 0) / bf.projPts.length;
                                     const by = bf.projPts.reduce((s, p) => s + p.y, 0) / bf.projPts.length;
@@ -792,15 +792,15 @@
                                     return (
                                         <g key={`cyl-base-${bIdx}`}>
                                             <circle cx={bx} cy={by} r={br + 2} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6 4" />
-                                            <rect x={bx - 42} y={by - 11} width="84" height="22" rx="11" fill="rgba(15, 23, 42, 0.88)" stroke="#f59e0b" strokeWidth="1.5" />
+                                            <rect x={bx - 28} y={by - 11} width="56" height="22" rx="11" fill="rgba(15, 23, 42, 0.88)" stroke="#f59e0b" strokeWidth="1.5" />
                                             <text x={bx} y={by} fill="#fde68a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                                {isTop ? '上底 (圓形)' : '下底 (圓形)'}
+                                                {isTop ? '上底' : '下底'}
                                             </text>
                                         </g>
                                     );
                                 })}
 
-                                {/* 框選整個圓柱展開側面長方形 */}
+                                {/* 框選整個圓柱展開側面 */}
                                 <rect
                                     x={minX - 4}
                                     y={minY - 4}
@@ -813,33 +813,33 @@
                                     strokeDasharray="8 5"
                                 />
 
-                                {/* 標示長方形的「長（＝底面圓周長）」雙向尺寸箭頭 */}
+                                {/* 標示「長」雙向尺寸箭頭（不含括號答案） */}
                                 <g>
                                     <line x1={minX + 6} y1={minY + 22} x2={maxX - 6} y2={minY + 22} stroke="#fde047" strokeWidth="2.5" />
                                     <polygon points={`${minX + 4},${minY + 22} ${minX + 14},${minY + 17} ${minX + 14},${minY + 27}`} fill="#fde047" />
                                     <polygon points={`${maxX - 4},${minY + 22} ${maxX - 14},${minY + 17} ${maxX - 14},${minY + 27}`} fill="#fde047" />
-                                    <rect x={midX - 96} y={minY + 10} width="192" height="24" rx="12" fill="rgba(15, 23, 42, 0.94)" stroke="#fde047" strokeWidth="1.8" />
+                                    <rect x={midX - 38} y={minY + 10} width="76" height="24" rx="12" fill="rgba(15, 23, 42, 0.94)" stroke="#fde047" strokeWidth="1.8" />
                                     <text x={midX} y={minY + 22} fill="#fef08a" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                        ⬅ 長（＝底面圓周長） ➡
+                                        ⬅ 長 ➡
                                     </text>
                                 </g>
 
-                                {/* 側面中央標籤 */}
+                                {/* 側面中央標籤（不標示展開為長方形） */}
                                 <g transform={`translate(${midX}, ${minY + 66})`}>
-                                    <rect x="-86" y="-12" width="172" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
+                                    <rect x="-42" y="-12" width="84" height="24" rx="12" fill="rgba(15, 23, 42, 0.92)" stroke="#22d3ee" strokeWidth="1.8" />
                                     <text x="0" y="0" fill="#67e8f9" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                        📦 側面（展開為長方形）
+                                        📦 側面
                                     </text>
                                 </g>
 
-                                {/* 右側標示長方形的「寬（＝圓柱的高）」雙向尺寸箭頭 */}
+                                {/* 右側標示「寬」雙向尺寸箭頭（不含括號答案） */}
                                 <g>
                                     <line x1={maxX + 16} y1={minY} x2={maxX + 16} y2={maxY} stroke="#f472b6" strokeWidth="2.5" />
                                     <polygon points={`${maxX + 16},${minY} ${maxX + 11},${minY + 9} ${maxX + 21},${minY + 9}`} fill="#f472b6" />
                                     <polygon points={`${maxX + 16},${maxY} ${maxX + 11},${maxY - 9} ${maxX + 21},${maxY - 9}`} fill="#f472b6" />
-                                    <rect x={maxX + 24} y={midY - 13} width="112" height="26" rx="8" fill="rgba(15, 23, 42, 0.94)" stroke="#f472b6" strokeWidth="1.8" />
-                                    <text x={maxX + 80} y={midY} fill="#fbcfe8" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                        ↕ 寬（＝柱高）
+                                    <rect x={maxX + 24} y={midY - 13} width="56" height="26" rx="8" fill="rgba(15, 23, 42, 0.94)" stroke="#f472b6" strokeWidth="1.8" />
+                                    <text x={maxX + 52} y={midY} fill="#fbcfe8" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                                        ↕ 寬
                                     </text>
                                 </g>
                             </g>
@@ -855,7 +855,7 @@
 
                         return (
                             <g className="pointer-events-none select-none" opacity={annotOpacity}>
-                                {/* 虛線高亮框選每一個三角形側面 */}
+                                {/* 虛線高亮框選每一個側面 */}
                                 {sideFaces.map((sf, i) => {
                                     const d = sf.projPts.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
                                     return (
@@ -869,11 +869,11 @@
                                         />
                                     );
                                 })}
-                                {/* 底部整體說明標籤 */}
+                                {/* 底部整體說明標籤（不洩漏三角形答案） */}
                                 <g transform={`translate(${midX}, ${maxY + 26})`}>
-                                    <rect x="-130" y="-13" width="260" height="26" rx="13" fill="rgba(15, 23, 42, 0.94)" stroke="#38bdf8" strokeWidth="1.8" />
+                                    <rect x="-90" y="-13" width="180" height="26" rx="13" fill="rgba(15, 23, 42, 0.94)" stroke="#38bdf8" strokeWidth="1.8" />
                                     <text x="0" y="0" fill="#7dd3fc" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                        📐 虛線框選處：共 {sides} 個「三角形側面」
+                                        📐 虛線框選處皆為「側面」
                                     </text>
                                 </g>
                             </g>
@@ -881,7 +881,7 @@
                     }
 
                     if (shapeType === 'cone') {
-                        // 將圓錐 32 個側面切片依序排列，描繪出完整的「扇形側面」外框與弧長
+                        // 將圓錐 32 個側面切片依序排列，描繪出完整的側面外框與弧長
                         const sortedSides = [...sideFaces].sort((a, b) => {
                             const ia = parseInt(a.id.split('-')[1] || '0', 10);
                             const ib = parseInt(b.id.split('-')[1] || '0', 10);
@@ -895,8 +895,21 @@
                         const arcOnlyD = arcPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
                         const midArcPt = arcPts[Math.floor(arcPts.length / 2)];
-                        const fanCenterX = apexPt.x * 0.45 + midArcPt.x * 0.55;
-                        const fanCenterY = apexPt.y * 0.45 + midArcPt.y * 0.55;
+                        const vx = midArcPt.x - apexPt.x;
+                        const vy = midArcPt.y - apexPt.y;
+                        const vLen = Math.hypot(vx, vy) || 1;
+                        const ux = vx / vLen;
+                        const uy = vy / vLen;
+
+                        // 「側面」置於扇形內部中央；「扇形弧長」沿弧線往外側推開，確保兩個文字方塊完全分開不重疊
+                        const fanCenterX = apexPt.x + vx * 0.45;
+                        const fanCenterY = apexPt.y + vy * 0.45;
+
+                        let arcLabelX = midArcPt.x + ux * 32;
+                        let arcLabelY = midArcPt.y + uy * 26;
+                        if (Math.hypot(arcLabelX - fanCenterX, arcLabelY - fanCenterY) < 48) {
+                            arcLabelY = uy <= 0 ? fanCenterY - 48 : fanCenterY + 48;
+                        }
 
                         const baseFace = baseFaces[0];
                         const bx = baseFace ? baseFace.projPts.reduce((s, p) => s + p.x, 0) / baseFace.projPts.length : 400;
@@ -909,31 +922,31 @@
                                 {baseFace && (
                                     <g>
                                         <circle cx={bx} cy={by} r={br + 2} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6 4" />
-                                        <rect x={bx - 44} y={by - 11} width="88" height="22" rx="11" fill="rgba(15, 23, 42, 0.9)" stroke="#f59e0b" strokeWidth="1.5" />
+                                        <rect x={bx - 28} y={by - 11} width="56" height="22" rx="11" fill="rgba(15, 23, 42, 0.9)" stroke="#f59e0b" strokeWidth="1.5" />
                                         <text x={bx} y={by} fill="#fde68a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                            底面 (圓形)
+                                            底面
                                         </text>
                                     </g>
                                 )}
 
-                                {/* 扇形側面完整外框 */}
+                                {/* 側面完整外框 */}
                                 <path d={fanPathD} fill="none" stroke="#38bdf8" strokeWidth="3.5" strokeDasharray="8 5" strokeLinejoin="round" />
                                 {/* 扇形弧長高亮 */}
                                 <path d={arcOnlyD} fill="none" stroke="#fde047" strokeWidth="3.5" strokeLinecap="round" />
 
-                                {/* 扇形側面中央標籤 */}
+                                {/* 側面中央標籤（不含括號答案） */}
                                 <g transform={`translate(${fanCenterX}, ${fanCenterY})`}>
-                                    <rect x="-86" y="-13" width="172" height="26" rx="13" fill="rgba(15, 23, 42, 0.94)" stroke="#38bdf8" strokeWidth="1.8" />
+                                    <rect x="-42" y="-13" width="84" height="26" rx="13" fill="rgba(15, 23, 42, 0.94)" stroke="#38bdf8" strokeWidth="1.8" />
                                     <text x="0" y="0" fill="#7dd3fc" fontSize="12" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                        📐 側面（展開後為扇形）
+                                        📐 側面
                                     </text>
                                 </g>
 
-                                {/* 扇形弧長標示 */}
-                                <g transform={`translate(${midArcPt.x}, ${midArcPt.y + 22})`}>
-                                    <rect x="-102" y="-12" width="204" height="24" rx="12" fill="rgba(15, 23, 42, 0.94)" stroke="#fde047" strokeWidth="1.8" />
+                                {/* 扇形弧長外側標示（不含括號答案，與側面標籤分開不重疊） */}
+                                <g transform={`translate(${arcLabelX}, ${arcLabelY})`}>
+                                    <rect x="-48" y="-12" width="96" height="24" rx="12" fill="rgba(15, 23, 42, 0.94)" stroke="#fde047" strokeWidth="1.8" />
                                     <text x="0" y="0" fill="#fef08a" fontSize="11.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                        ✨ 扇形弧長（＝底面圓周長）
+                                        ✨ 扇形弧長
                                     </text>
                                 </g>
                             </g>
